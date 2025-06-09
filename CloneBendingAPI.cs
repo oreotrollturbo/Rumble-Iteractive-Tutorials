@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Reflection;
+using System.Reflection.Emit;
 using CloneBending;
 using RumbleModdingAPI;
 using MelonLoader;
@@ -9,25 +10,32 @@ using UnityEngine;
 
 namespace InteractiveTutorials;
 
+public static class CloneUploadInterceptor
+{
+    public static bool IsCustomUpload = true;
+    public static string path;
+
+    public static string GetPath()
+    {
+        MelonLogger.Warning("Changing le path");
+        if (IsCustomUpload)
+        {
+            IsCustomUpload = false;
+            return path;
+        }
+        else
+        {
+            return "UserData/CloneBending/clone.json";
+        } 
+    }
+}
+
+
 public static class CloneBendingAPI
 {
     public static object cloneBendingInstance;
     public static Type cloneBendingType;
     public static MelonLogger.Instance LoggerInstance;
-    
-
-    public static IEnumerator DoTestRecording()
-    {
-        yield return new WaitForSeconds(1f);
-            
-        StartRecording();
-                
-        yield return new WaitForSeconds(30f);
-            
-        MelonLogger.Msg("Stopped recording");
-        StopRecording();
-        SaveClone();
-    }
     
     public static void SaveClone()
     {
@@ -42,24 +50,46 @@ public static class CloneBendingAPI
         
         try
         {
-            
-            if (!cloneMethod.IsStatic)
-            {
-                if (cloneBendingInstance == null)
-                {
-                    LoggerInstance.Error("Failed to create MainClass instance");
-                    return;
-                }
-            }
-            
             cloneMethod.Invoke(cloneBendingInstance, new object[] { null, EventArgs.Empty });
             //cloneMethod.Invoke(instance, null);
 
-            LoggerInstance.Msg("SaveClone method invoked");
+            LoggerInstance.Msg("Saving clone");
         }
         catch (Exception ex)
         {
             LoggerInstance.Error($"Error saving clone: {ex}");
+        }
+    }
+    
+    public static void LoadClone(string? path)
+    {
+        Type cloneType = cloneBendingType;
+        MethodInfo cloneMethod = AccessTools.Method(cloneType, "uploadClone");
+    
+        if (cloneMethod == null)
+        {
+            LoggerInstance.Error("Method not found!");
+            return;
+        }
+
+        if (path == null)
+        {
+            CloneUploadInterceptor.IsCustomUpload = false;
+        }
+        else
+        {
+            CloneUploadInterceptor.IsCustomUpload = true;
+            CloneUploadInterceptor.path = path;
+        }
+        
+        try
+        {
+            cloneMethod.Invoke(cloneBendingInstance, new object[] { null, EventArgs.Empty });
+            LoggerInstance.Msg("Uploading clone");
+        }
+        catch (Exception ex)
+        {
+            LoggerInstance.Error($"Error uploading clone: {ex}");
         }
     }
 
@@ -128,8 +158,49 @@ public static class CloneBendingAPI
         {
             indicator.SetActive(false);
         }
-
-
+        
         LoggerInstance.Msg("Recording stopped.");
+    }
+
+    public static void PlayClone()
+    {
+        FieldInfo currentFrame = AccessTools.Field(cloneBendingType, "curFrame"); //0
+        FieldInfo isPlaying = AccessTools.Field(cloneBendingType, "isPlaying"); //true
+        FieldInfo isROnCooldownField = AccessTools.Field(cloneBendingType, "isPOnCooldown"); //true
+        
+        if (currentFrame != null) currentFrame.SetValue(cloneBendingInstance, true);
+        if (isPlaying != null) isPlaying.SetValue(cloneBendingInstance, true);
+        if (isROnCooldownField != null) isROnCooldownField.SetValue(cloneBendingInstance, true);
+        
+        LoggerInstance.Msg("Playing recording.");
+    }
+
+    public static void StopClone()
+    {
+        MethodInfo stopCloneMethod = AccessTools.Method(cloneBendingType, "finishPlaying");
+
+        stopCloneMethod.Invoke(cloneBendingInstance, null);
+    }
+    
+    [HarmonyPatch(typeof(MainClass), "uploadClone")]
+    public static class UploadClonePatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            var target = "UserData/CloneBending/clone.json";
+            
+            MelonLogger.Warning("Calling the harmony patch");
+    
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Ldstr && codes[i].operand as string == target)
+                {
+                    codes[i] = new CodeInstruction(OpCodes.Call, typeof(CloneUploadInterceptor).GetMethod("GetPath"));
+                }
+            }
+    
+            return codes.AsEnumerable();
+        }
     }
 }

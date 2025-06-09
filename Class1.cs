@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections;
-using System.Reflection;
-using CloneBending;
+﻿using CloneBending;
 using RumbleModdingAPI;
 using MelonLoader;
-using HarmonyLib;
+using MelonLoader.Utils;
 using UnityEngine;
 using BuildInfo = InteractiveTutorials.BuildInfo;
 
@@ -23,11 +20,21 @@ namespace InteractiveTutorials
     
     public class Main : MelonMod
     {
+        public static string FolderPath => Path.Combine(MelonEnvironment.UserDataDirectory, "InteractiveTutorials");
+
+        public static string CurrentPath => Path.Combine(FolderPath, "tutorial1\\clone.json");
         
         public override void OnLateInitializeMelon()
         {
+            MelonLogger.Warning("Path is: " + CurrentPath);
             CloneBendingAPI.LoggerInstance = LoggerInstance;
             Calls.onMapInitialized += SceneLoaded;
+            
+            if (!Directory.Exists(FolderPath))
+            {
+                MelonLogger.Warning("Creating tutorials directory");
+                Directory.CreateDirectory(FolderPath);
+            }
         }
 
         private void SceneLoaded()
@@ -40,9 +47,6 @@ namespace InteractiveTutorials
                     (mod => mod.GetType() == mainType) as CloneBending.MainClass;
             }
         }
-
-        
-        
         
     }
 }
