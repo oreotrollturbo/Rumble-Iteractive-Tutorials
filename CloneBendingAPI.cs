@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -7,6 +8,8 @@ using RumbleModdingAPI;
 using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
+using Directory = Il2CppSystem.IO.Directory;
+using Path = Il2CppSystem.IO.Path;
 
 namespace InteractiveTutorials;
 
@@ -17,7 +20,6 @@ public static class CloneUploadInterceptor
 
     public static string GetPath()
     {
-        MelonLogger.Warning("Changing le path");
         if (IsCustomUpload)
         {
             IsCustomUpload = false;
@@ -37,7 +39,7 @@ public static class CloneBendingAPI
     public static Type cloneBendingType;
     public static MelonLogger.Instance LoggerInstance;
     
-    public static void SaveClone()
+    public static void SaveClone(string? path) //TODO
     {
         Type cloneType = cloneBendingType;
         MethodInfo cloneMethod = AccessTools.Method(cloneType, "downloadClone");
@@ -51,9 +53,15 @@ public static class CloneBendingAPI
         try
         {
             cloneMethod.Invoke(cloneBendingInstance, new object[] { null, EventArgs.Empty });
-            //cloneMethod.Invoke(instance, null);
 
-            LoggerInstance.Msg("Saving clone");
+            LoggerInstance.Msg("Saving clone to special directory");
+
+
+            string destPath = Path.Combine(Main.LocalRecordedPath, "clone.json");
+            
+            File.Delete(destPath);
+            
+            File.Move("UserData/CloneBending/clone.json", destPath,true);
         }
         catch (Exception ex)
         {
@@ -190,8 +198,6 @@ public static class CloneBendingAPI
             var codes = new List<CodeInstruction>(instructions);
             var target = "UserData/CloneBending/clone.json";
             
-            MelonLogger.Warning("Calling the harmony patch");
-    
             for (int i = 0; i < codes.Count; i++)
             {
                 if (codes[i].opcode == OpCodes.Ldstr && codes[i].operand as string == target)

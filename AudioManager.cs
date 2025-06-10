@@ -18,58 +18,32 @@ public static class AudioManager
 
     private static IEnumerator PlaySound(ClipData clipData, bool loop)
     {
-        if (clipData == null || clipData.WaveOut == null || clipData.Reader == null)
-        {
-            MelonLogger.Error("clipData is null or has missing components.");
-            yield break;
-        }
+        // Take local references that won't change
+        var waveOut = clipData.WaveOut;
+        var reader = clipData.Reader;
+    
+        if (waveOut == null || reader == null) yield break;
 
-        do
-        {
-            // If not resuming from a pause, reset to the start of the clip.
-            // Otherwise, keep the current Reader.Position.
-            if (!clipData.IsPaused)
+        do {
+            reader.Position = 0;
+            waveOut.Play();
+        
+            while (waveOut.PlaybackState == PlaybackState.Playing)
             {
-                clipData.Reader.Position = 0;
-            }
-
-            // Start or resume playing the sound.
-            clipData.WaveOut.Play();
-
-            // Wait until the sound finishes playing.
-            // If the clip is paused, continue yielding until it is resumed.
-            while (clipData.WaveOut != null)
-            {
-                if (clipData.IsPaused)
-                {
-                    // When paused, simply yield and wait.
-                    yield return null;
-                    continue;
-                }
-
-                // If playback is no longer active (finished or stopped), break out.
-                if (clipData.WaveOut.PlaybackState != PlaybackState.Playing)
-                {
-                    break;
-                }
-
                 yield return null;
+            
+                // Check if we should abort
+                if (clipData.WaveOut != waveOut) // Was replaced
+                    yield break;
             }
-
-            // If looping and still active, stop the current playback before restarting.
-            if (loop && clipData.WaveOut != null)
-            {
-                clipData.WaveOut.Stop();
-            }
-
-        } while (loop && clipData.WaveOut != null);
-
-        // Only clean up if we're not paused.
-        if (!clipData.IsPaused)
+        
+        } while (loop && clipData.WaveOut == waveOut);
+    
+        // Only dispose if this is still the active clip
+        if (clipData.WaveOut == waveOut)
         {
-            clipData.Reader.Dispose();
-            clipData.WaveOut.Dispose();
-            clipData.WaveOut = null;
+            waveOut.Dispose();
+            reader.Dispose();
         }
     }
     
