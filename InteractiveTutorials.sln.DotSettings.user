@@ -1,6 +1,7 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CIl2Cppmscorlib_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CIl2CppRUMBLE_002ERuntime_002Edll/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CUnityEngine_002EAudioModule_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CUnityEngine_002ECoreModule_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CUnityEngine_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CMelonLoader_005CIl2CppAssemblies_005CUnity_002ETextMeshPro_002Edll/@EntryIndexedValue">True</s:Boolean>
@@ -14,4 +15,5 @@
 	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CProgram_0020Files_0020_0028x86_0029_005CSteam_005Csteamapps_005Ccommon_005CRUMBLE_005CUserLibs_005CNAudio_002EWinMM_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:String x:Key="/Default/Environment/AssemblyExplorer/XmlDocument/@EntryValue">&lt;AssemblyExplorer&gt;&#xD;
   &lt;Assembly Path="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\CloneBending.dll" /&gt;&#xD;
+  &lt;Assembly Path="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\UnityEngine.dll" /&gt;&#xD;
 &lt;/AssemblyExplorer&gt;</s:String></wpf:ResourceDictionary>

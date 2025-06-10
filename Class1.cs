@@ -195,7 +195,7 @@ namespace InteractiveTutorials
             CloneBendingAPI.StopClone();
             
             string pathToClone = Path.Combine(selectedTutorial, "clone.json");
-            string pathToAudio = Path.Combine(selectedTutorial, "audio.mp3");
+            string pathToAudio = Path.Combine(selectedTutorial, "audio.wav");
             CloneBendingAPI.LoadClone(pathToClone);
             
             CloneBendingAPI.PlayClone();
@@ -225,14 +225,14 @@ namespace InteractiveTutorials
             
                 CloneBendingAPI.StartRecording();
                 isRecording = true;
-                //TODO audio recording
+                MicrophoneRecorder.StartRecording();
             }
             else
             {
                 CloneBendingAPI.StopRecording();
+                MicrophoneRecorder.StopRecordingAndSave(LocalRecordedPath);
                 CloneBendingAPI.SaveClone(LocalRecordedPath);
                 isRecording = false;
-                //TODO audio recording
             }
         }
         
