@@ -1,5 +1,8 @@
-﻿using CloneBending;
+﻿using System.Collections;
+using System.Reflection.Emit;
+using CloneBending;
 using CustomBattleMusic;
+using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppTMPro;
 using RumbleModdingAPI;
@@ -55,7 +58,7 @@ namespace InteractiveTutorials
             CloneBendingAPI.cloneBendingInstance = RegisteredMelons.FirstOrDefault
                 (mod => mod.GetType() == mainType) as CloneBending.MainClass;
 
-            Vector3 selectorLoc = new Vector3(-14.1415f, 1.6887f, 3.0538f);
+            Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
             CreateTutorialSelector(selectorLoc,rotation);
         }
@@ -113,12 +116,12 @@ namespace InteractiveTutorials
             // Create text labels below each button:
             GameObject prevLabel = Calls.Create.NewText("Previous", 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
             prevLabel.transform.position = prevButton.transform.position + new Vector3(0f, -0.1f, 0f);
-            prevLabel.transform.rotation = Quaternion.Euler(0.0f, 40.0f, 0f);
+            prevLabel.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
             prevLabel.transform.SetParent(prevButton.transform, true);
     
             GameObject nextLabel = Calls.Create.NewText("Next", 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
             nextLabel.transform.position = nextButton.transform.position + new Vector3(0f, -0.1f, 0f);
-            nextLabel.transform.rotation = Quaternion.Euler(0.0f, 40.0f, 0f);
+            nextLabel.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
             nextLabel.transform.SetParent(nextButton.transform, true);
         }
         
@@ -160,7 +163,28 @@ namespace InteractiveTutorials
             string pathToAudio = Path.Combine(selectedTutorial, "audio.mp3");
             CloneBendingAPI.LoadClone(pathToClone);
             CloneBendingAPI.PlayClone();
-            AudioManager.PlaySoundIfFileExists(pathToAudio);
+            currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
+        }
+        
+        [HarmonyPatch(typeof(MainClass), "finishPlaying")]
+        public static class UploadClonePatch
+        {
+            static void Postfix(MainClass __instance, ref IEnumerator __result)
+            {
+                __result = FinishPlayingWrapper(__instance, __result);
+            }
+
+            private static IEnumerator FinishPlayingWrapper(MainClass instance, IEnumerator original)
+            {
+                yield return original;
+        
+                // Only stop if we have a valid clip
+                if (currentAudio != null)
+                {
+                    AudioManager.StopPlayback(currentAudio);
+                    currentAudio = null; // Clear the reference after stopping
+                }
+            }
         }
     }
 }

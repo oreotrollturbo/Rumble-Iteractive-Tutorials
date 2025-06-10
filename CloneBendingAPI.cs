@@ -168,7 +168,7 @@ public static class CloneBendingAPI
         FieldInfo isPlaying = AccessTools.Field(cloneBendingType, "isPlaying"); //true
         FieldInfo isROnCooldownField = AccessTools.Field(cloneBendingType, "isPOnCooldown"); //true
         
-        if (currentFrame != null) currentFrame.SetValue(cloneBendingInstance, true);
+        if (currentFrame != null) currentFrame.SetValue(cloneBendingInstance, 0);
         if (isPlaying != null) isPlaying.SetValue(cloneBendingInstance, true);
         if (isROnCooldownField != null) isROnCooldownField.SetValue(cloneBendingInstance, true);
         
