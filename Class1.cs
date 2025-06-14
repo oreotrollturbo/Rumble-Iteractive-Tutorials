@@ -1,13 +1,12 @@
 ﻿using System.Collections;
-using System.Reflection.Emit;
 using CloneBending;
 using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
-using Il2CppRUMBLE.Managers;
 using Il2CppTMPro;
 using RumbleModdingAPI;
 using MelonLoader;
 using MelonLoader.Utils;
+using RumbleModUI;
 using UnityEngine;
 using AudioManager = CustomBattleMusic.AudioManager;
 using BuildInfo = InteractiveTutorials.BuildInfo;
@@ -27,6 +26,7 @@ namespace InteractiveTutorials
     
     public class Main : MelonMod
     {
+        private Mod mod = new Mod();
         public static string FolderPath => Path.Combine(MelonEnvironment.UserDataDirectory, "InteractiveTutorials");
         public static string LocalRecordedPath => Path.Combine(FolderPath, "MyRecording");
         
@@ -39,11 +39,15 @@ namespace InteractiveTutorials
         public static bool isRecording;
         public static bool isPlaying;
         public static bool isOnCooldown;
+
+        public static ModSetting<bool> hearYourself;
+        public static ModSetting<int> microphoneIndex;
         
         public override void OnLateInitializeMelon()
         {
             CloneBendingAPI.LoggerInstance = LoggerInstance;
             Calls.onMapInitialized += SceneLoaded;
+            UI.instance.UI_Initialized += OnUIInit;
             
             if (!Directory.Exists(FolderPath))
             {
@@ -55,6 +59,26 @@ namespace InteractiveTutorials
             {
                 Directory.CreateDirectory(LocalRecordedPath);
             }
+        }
+        
+        public void OnUIInit()
+        {
+            mod.ModName = BuildInfo.ModName;
+            mod.ModVersion = BuildInfo.ModVersion;
+            mod.SetFolder("InteractiveTutorials");
+            mod.AddDescription("Description", "A platform to create and share in-game tutorials with audio :)", BuildInfo.Description,
+                new Tags { IsSummary = true });
+
+            hearYourself = mod.AddToList("Hear yourself", false, 1, "Plays your voice back as you are recording", new Tags());
+
+            // Corrected assignments: swapped variable names and labels
+            microphoneIndex = mod.AddToList("Default microphone index", 0, "The index of your input device (change if audio doesnt record)", new Tags());
+
+            mod.GetFromFile();
+
+            //mod.ModSaved += Save;
+            UI.instance.AddMod(mod);
+            MelonLogger.Msg("Added Mod: " + BuildInfo.ModName);
         }
 
         private void SceneLoaded()
@@ -72,6 +96,8 @@ namespace InteractiveTutorials
             Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
             CreateTutorialSelector(selectorLoc,rotation);
+            
+            MicrophoneRecorder.InitMicRecording();
         }
         
         private static void CreateTutorialSelector(Vector3 vector, Quaternion rotation)
@@ -209,7 +235,7 @@ namespace InteractiveTutorials
             if ( !isRecording )
             {
                 GameObject modeTextObject = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 3f, Color.white, Vector3.zero, Quaternion.identity);
-                modeTextObject.GetComponent<TextMeshPro>().text = "Lights";
+                modeTextObject.GetComponent<TextMeshPro>().text = "  Lights  ";
                 modeTextObject.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
                 modeTextObject.transform.localPosition = new Vector3(0f, 0f, 1f);
                 modeTextObject.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
@@ -230,7 +256,7 @@ namespace InteractiveTutorials
             else
             {
                 CloneBendingAPI.StopRecording();
-                MicrophoneRecorder.StopRecordingAndSave(LocalRecordedPath);
+                MicrophoneRecorder.StopAndSave("UserData/InteractiveTutorials/MyRecording/audio.wav");
                 CloneBendingAPI.SaveClone(LocalRecordedPath);
                 isRecording = false;
             }

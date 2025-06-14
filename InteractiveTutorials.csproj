@@ -25,6 +25,9 @@
       <Reference Include="MelonLoader">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net6\MelonLoader.dll</HintPath>
       </Reference>
+      <Reference Include="ModUI">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\ModUI.dll</HintPath>
+      </Reference>
       <Reference Include="NAudio">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\UserLibs\NAudio.dll</HintPath>
       </Reference>
