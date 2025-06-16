@@ -31,7 +31,11 @@ namespace InteractiveTutorials
         public static string LocalRecordedPath => Path.Combine(FolderPath, "MyRecording");
         
         public static string[] tutorials = Directory.GetDirectories(FolderPath);
-        public static string selectedTutorial = tutorials[0];
+
+        // Try to find the directory named "Introduction"
+        public static string selectedTutorial = tutorials
+                                                    .FirstOrDefault(t => Path.GetFileName(t).Contains("Introduction", StringComparison.OrdinalIgnoreCase))
+                                                ?? tutorials[0]; // fallback to first if not found
         public static GameObject selectorText;
 
         public static AudioManager.ClipData currentAudio;
@@ -69,10 +73,10 @@ namespace InteractiveTutorials
             mod.AddDescription("Description", "A platform to create and share in-game tutorials with audio :)", BuildInfo.Description,
                 new Tags { IsSummary = true });
 
-            hearYourself = mod.AddToList("Hear yourself", false, 1, "Plays your voice back as you are recording", new Tags());
+            //hearYourself = mod.AddToList("Hear yourself", false, 1, "Plays your voice back as you are recording", new Tags());
 
             // Corrected assignments: swapped variable names and labels
-            microphoneIndex = mod.AddToList("Default microphone index", 0, "The index of your input device (change if audio doesnt record)", new Tags());
+            //microphoneIndex = mod.AddToList("Default microphone index", 0, "The index of your input device (change if audio doesnt record)", new Tags());
 
             mod.GetFromFile();
 
@@ -96,8 +100,6 @@ namespace InteractiveTutorials
             Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
             CreateTutorialSelector(selectorLoc,rotation);
-            
-            MicrophoneRecorder.InitMicRecording();
         }
         
         private static void CreateTutorialSelector(Vector3 vector, Quaternion rotation)
@@ -142,6 +144,16 @@ namespace InteractiveTutorials
             
             playButton.transform.GetChild(0).gameObject.GetComponent<InteractionButton>().onPressed.AddListener(new Action(() =>
             {
+                if ( isRecording ) return;
+
+                if ( isPlaying )
+                {
+                    CloneBendingAPI.StopClone();
+                    isPlaying = false;
+                    AudioManager.StopPlayback(currentAudio);
+                    return;
+                }
+                
                 PlayTutorial();
             }));
             
@@ -235,7 +247,7 @@ namespace InteractiveTutorials
             if ( !isRecording )
             {
                 GameObject modeTextObject = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 3f, Color.white, Vector3.zero, Quaternion.identity);
-                modeTextObject.GetComponent<TextMeshPro>().text = "  Lights  ";
+                modeTextObject.GetComponent<TextMeshPro>().text = "   Lights   ";
                 modeTextObject.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
                 modeTextObject.transform.localPosition = new Vector3(0f, 0f, 1f);
                 modeTextObject.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
@@ -256,7 +268,7 @@ namespace InteractiveTutorials
             else
             {
                 CloneBendingAPI.StopRecording();
-                MicrophoneRecorder.StopAndSave("UserData/InteractiveTutorials/MyRecording/audio.wav");
+                MicrophoneRecorder.StopRecording();
                 CloneBendingAPI.SaveClone(LocalRecordedPath);
                 isRecording = false;
             }
