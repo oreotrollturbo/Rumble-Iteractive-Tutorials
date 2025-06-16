@@ -2,6 +2,7 @@
 using CloneBending;
 using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
+using Il2CppRUMBLE.Managers;
 using Il2CppTMPro;
 using RumbleModdingAPI;
 using MelonLoader;
@@ -38,11 +39,7 @@ namespace InteractiveTutorials
                                                 ?? tutorials[0]; // fallback to first if not found
         public static GameObject selectorText;
 
-        public static AudioManager.ClipData currentAudio;
-
-        public static bool isRecording;
-        public static bool isPlaying;
-        public static bool isOnCooldown;
+        public static TutorialSelector tutorialSelector;
 
         public static ModSetting<bool> hearYourself;
         public static ModSetting<int> microphoneIndex;
@@ -89,6 +86,7 @@ namespace InteractiveTutorials
         {
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
+                tutorialSelector = null;
                 return;
             }
             
@@ -99,106 +97,143 @@ namespace InteractiveTutorials
 
             Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
-            CreateTutorialSelector(selectorLoc,rotation);
+            tutorialSelector = new TutorialSelector(selectorLoc,rotation);
         }
         
-        private static void CreateTutorialSelector(Vector3 vector, Quaternion rotation)
+        
+        [HarmonyPatch(typeof(MainClass), "finishPlaying")]
+        public static class UploadClonePatch
         {
-            string directoryName = Path.GetFileName(selectedTutorial);
-    
-            selectorText = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better"
-                , 3f, Color.white, new Vector3(), Quaternion.Euler(0f, 0f, 0f));
-            
-            selectorText.transform.position = vector;
-            selectorText.name = "InteractiveTutorials";
-            selectorText.GetComponent<TextMeshPro>().text = directoryName;
-    
-            // Now the prevButton uses the previous 'nextButton' position, and vice versa.
-            GameObject prevButton = Calls.Create.NewButton(
-                selectorText.transform.position - new Vector3(0.3f, 0.4f, 0f),
-                Quaternion.Euler(90, selectorText.transform.rotation.y - 180, 0));
-            prevButton.transform.SetParent(selectorText.transform, true);
-            
-            prevButton.transform.GetChild(0).gameObject.GetComponent<InteractionButton>().onPressed.AddListener(new Action(() =>
+            static void Postfix(MainClass __instance, ref IEnumerator __result)
             {
-                CycleTutorialBy(-1);
-            }));
-            
+                __result = FinishPlayingWrapper(__instance, __result);
+            }
 
-            GameObject nextButton = Calls.Create.NewButton(
-                selectorText.transform.position + new Vector3(0.3f, -0.4f, 0f),
-                Quaternion.Euler(90, selectorText.transform.rotation.y - 180, 0));
-            nextButton.transform.SetParent(selectorText.transform, true);
-            
-            nextButton.transform.GetChild(0).gameObject.GetComponent<InteractionButton>().onPressed.AddListener(new Action(() =>
+            private static IEnumerator FinishPlayingWrapper(MainClass instance, IEnumerator original)
             {
-                CycleTutorialBy(1);
-            }));
+                yield return original;
 
-            
-            // The preview button is now positioned half the previous vertical offset difference
-            GameObject playButton = Calls.Create.NewButton(
-                selectorText.transform.position + new Vector3(0.0f, -0.6f, 0f),
-                Quaternion.Euler(90, selectorText.transform.rotation.y - 180, 0));
-            playButton.transform.SetParent(selectorText.transform, true);
-            
-            playButton.transform.GetChild(0).gameObject.GetComponent<InteractionButton>().onPressed.AddListener(new Action(() =>
-            {
-                if ( isRecording ) return;
-
-                if ( isPlaying )
-                {
-                    CloneBendingAPI.StopClone();
-                    isPlaying = false;
-                    AudioManager.StopPlayback(currentAudio);
-                    return;
-                }
-                
-                PlayTutorial();
-            }));
-            
-            
-            GameObject recordButton = Calls.Create.NewButton(
-                selectorText.transform.position + new Vector3(0.7f, -0.6f, 0f),
-                Quaternion.Euler(90, selectorText.transform.rotation.y - 180, 0));
-            recordButton.transform.SetParent(selectorText.transform, true);
-            
-            recordButton.transform.GetChild(0).gameObject.GetComponent<InteractionButton>().onPressed.AddListener(new Action(() =>
-            {
-                if (isOnCooldown) return;
-                isOnCooldown = true;
-                MelonCoroutines.Start(CooldownCoroutine());
-                if (isPlaying)
-                {
-                    isPlaying = false;
-                    return;
-                }
-                MelonCoroutines.Start(HandleRecording());
-            }));
-            
-            
-            GameObject previewLabel = Calls.Create.NewText("Start", 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
-            previewLabel.transform.position = playButton.transform.position + new Vector3(0f, -0.1f, 0f);
-            previewLabel.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
-            previewLabel.transform.SetParent(playButton.transform, true);
-    
-            // Set the selectorText rotation last so that button rotations remain unchanged
-            selectorText.transform.rotation = rotation;
-            
-
-            // Create text labels below each button:
-            GameObject prevLabel = Calls.Create.NewText("Previous", 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
-            prevLabel.transform.position = prevButton.transform.position + new Vector3(0f, -0.1f, 0f);
-            prevLabel.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
-            prevLabel.transform.SetParent(prevButton.transform, true);
-    
-            GameObject nextLabel = Calls.Create.NewText("Next", 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
-            nextLabel.transform.position = nextButton.transform.position + new Vector3(0f, -0.1f, 0f);
-            nextLabel.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
-            nextLabel.transform.SetParent(nextButton.transform, true);
-        }
+                 tutorialSelector.isPlaying = false;
         
-        public static void CycleTutorialBy(int number)
+                // Only stop if we have a valid clip
+                if (tutorialSelector.currentAudio != null)
+                {
+                    AudioManager.StopPlayback(tutorialSelector.currentAudio);
+                    tutorialSelector.currentAudio = null; // Clear the reference after stopping
+                }
+            }
+        }
+    }
+    
+   public class TutorialSelector
+{
+    public GameObject selectorText;
+    
+    public bool isRecording;
+    public bool isPlaying;
+    public bool isOnCooldown;
+
+    private ButtonWithLabel prevButton;
+    private ButtonWithLabel nextButton;
+    private ButtonWithLabel forwardBackButton;
+    private ButtonWithLabel playButton;
+    private ButtonWithLabel recordButton;
+    
+    public AudioManager.ClipData currentAudio;
+
+    public TutorialSelector(Vector3 vector, Quaternion rotation)
+    {
+        string directoryName = "    " + Path.GetFileName(Main.selectedTutorial) + "    ";
+        
+        selectorText = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 
+            3f, Color.white, new Vector3(), Quaternion.Euler(0f, 0f, 0f));
+        
+        selectorText.transform.position = vector;
+        selectorText.name = "InteractiveTutorials";
+        selectorText.GetComponent<TextMeshPro>().text = directoryName;
+
+        // Define common button rotation
+        Quaternion buttonRotation = Quaternion.Euler(90, rotation.y - 180, 0);
+        
+        // Create buttons using ButtonWithLabel class
+        prevButton = new ButtonWithLabel(
+            selectorText.transform.position - new Vector3(0.3f, 0.4f, 0f),
+            buttonRotation,
+            "Previous",
+            "PrevButton",
+            selectorText.transform
+        );
+        
+        nextButton = new ButtonWithLabel(
+            selectorText.transform.position + new Vector3(0.3f, -0.4f, 0f),
+            buttonRotation,
+            "Next",
+            "NextButton",
+            selectorText.transform
+        );
+        
+        forwardBackButton = new ButtonWithLabel(
+            selectorText.transform.position + new Vector3(0.3f, 0.0f, 0f),
+            buttonRotation,
+            "Forward/Back",
+            "ForwardBackButton",
+            selectorText.transform
+        );
+        
+        playButton = new ButtonWithLabel(
+            selectorText.transform.position + new Vector3(0.0f, -0.6f, 0f),
+            buttonRotation,
+            "Start",
+            "PlayButton",
+            selectorText.transform
+        );
+        
+        recordButton = new ButtonWithLabel(
+            selectorText.transform.position + new Vector3(0.7f, -0.6f, 0f),
+            buttonRotation,
+            "Record",
+            "RecordButton",
+            selectorText.transform
+        );
+
+        // Set up event listeners - FIXED: Get child(0) for InteractionButton
+        prevButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => CycleTutorialBy(-1)));
+        nextButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => CycleTutorialBy(1)));
+        
+        forwardBackButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        {
+            // TODO: Implement forward/back functionality
+        }));
+        
+        playButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        {
+            if (isRecording) return;
+            if (isPlaying) StopPlayback();
+            else PlayTutorial();
+        }));
+        
+        recordButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        {
+            if (isOnCooldown) return;
+            isOnCooldown = true;
+            MelonCoroutines.Start(CooldownCoroutine());
+            if (isPlaying) isPlaying = false;
+            MelonCoroutines.Start(HandleRecording());
+        }));
+
+        // Set selector rotation last to preserve button orientations
+        selectorText.transform.rotation = rotation;
+    }
+
+    private void StopPlayback()
+    {
+        CloneBendingAPI.StopClone();
+        isPlaying = false;
+        AudioManager.StopPlayback(currentAudio);
+    }
+        
+        
+        private void CycleTutorialBy(int number)
         {
             if (selectorText == null)
             {
@@ -206,34 +241,34 @@ namespace InteractiveTutorials
                 return;
             }
 
-            int currentIndex = Array.IndexOf(tutorials, selectedTutorial);
+            int currentIndex = Array.IndexOf(Main.tutorials, Main.selectedTutorial);
             if (currentIndex == -1) return;
 
-            int newIndex = (currentIndex + number) % tutorials.Length;
-            if (newIndex < 0) newIndex += tutorials.Length; // Ensure valid index
+            int newIndex = (currentIndex + number) % Main.tutorials.Length;
+            if (newIndex < 0) newIndex += Main.tutorials.Length; // Ensure valid index
 
-            string nextTutorial = tutorials[newIndex];
-            selectedTutorial = nextTutorial;
+            string nextTutorial = Main.tutorials[newIndex];
+            Main.selectedTutorial = nextTutorial;
 
             string actualDirName = Path.GetFileName(nextTutorial);
             
             ChangeSelectorText(actualDirName);
         }
         
-        private static void ChangeSelectorText(String text)
+        private void ChangeSelectorText(String text)
         {
             selectorText.GetComponent<TextMeshPro>().text = text;
         }
 
-        private static void PlayTutorial()
+        private void PlayTutorial()
         {
             
             MelonLogger.Msg("Playing Tutorial");
             AudioManager.StopPlayback(currentAudio);
             CloneBendingAPI.StopClone();
             
-            string pathToClone = Path.Combine(selectedTutorial, "clone.json");
-            string pathToAudio = Path.Combine(selectedTutorial, "audio.wav");
+            string pathToClone = Path.Combine(Main.selectedTutorial, "clone.json");
+            string pathToAudio = Path.Combine(Main.selectedTutorial, "audio.wav");
             CloneBendingAPI.LoadClone(pathToClone);
             
             CloneBendingAPI.PlayClone();
@@ -242,7 +277,7 @@ namespace InteractiveTutorials
         }
         
         
-        private static IEnumerator HandleRecording()
+        private IEnumerator HandleRecording()
         {
             if ( !isRecording )
             {
@@ -269,39 +304,41 @@ namespace InteractiveTutorials
             {
                 CloneBendingAPI.StopRecording();
                 MicrophoneRecorder.StopRecording();
-                CloneBendingAPI.SaveClone(LocalRecordedPath);
+                CloneBendingAPI.SaveClone(Main.LocalRecordedPath);
                 isRecording = false;
             }
         }
         
-        private static IEnumerator CooldownCoroutine()
+        private IEnumerator CooldownCoroutine()
         {
             yield return new WaitForSeconds(1f);
             isOnCooldown = false;
         }
-        
-        
-        [HarmonyPatch(typeof(MainClass), "finishPlaying")]
-        public static class UploadClonePatch
+    }
+
+    public class ButtonWithLabel
+    {
+        public GameObject button;
+        public GameObject label;
+
+        public ButtonWithLabel(Vector3 buttonLoc, Quaternion rotation , string labelText, string objectName, Transform parent)
         {
-            static void Postfix(MainClass __instance, ref IEnumerator __result)
+            button = Calls.Create.NewButton(
+                buttonLoc - new Vector3(0.3f, 0.4f, 0f),
+                Quaternion.Euler(90, rotation.y - 180, 0));
+            
+            button.name = objectName;
+            
+            if (parent != null)
             {
-                __result = FinishPlayingWrapper(__instance, __result);
+                button.transform.SetParent(parent, true);
             }
-
-            private static IEnumerator FinishPlayingWrapper(MainClass instance, IEnumerator original)
-            {
-                yield return original;
-
-                isPlaying = false;
-        
-                // Only stop if we have a valid clip
-                if (currentAudio != null)
-                {
-                    AudioManager.StopPlayback(currentAudio);
-                    currentAudio = null; // Clear the reference after stopping
-                }
-            }
+            
+            label = Calls.Create.NewText(labelText, 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
+            label.transform.position = button.transform.position + new Vector3(0f, -0.1f, 0f);
+            label.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
+            label.transform.SetParent(button.transform, true);
+            label.name = objectName + " label";
         }
     }
 }
