@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Text.Json;
 using CloneBending;
 using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
@@ -37,9 +38,12 @@ namespace InteractiveTutorials
         public static string selectedTutorial = tutorials
                                                     .FirstOrDefault(t => Path.GetFileName(t).Contains("Introduction", StringComparison.OrdinalIgnoreCase))
                                                 ?? tutorials[0]; // fallback to first if not found
-        public static GameObject selectorText;
 
-        public static TutorialSelector tutorialSelector;
+        public static TutorialSelector? tutorialSelector;
+
+        public static PlayerManager playerManager;
+
+        public static int playerBP;
 
         public static ModSetting<bool> hearYourself;
         public static ModSetting<int> microphoneIndex;
@@ -84,6 +88,11 @@ namespace InteractiveTutorials
 
         private void SceneLoaded()
         {
+            if (tutorialSelector != null)
+            {
+                tutorialSelector.StopPlayback();
+            }
+            
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
                 tutorialSelector = null;
@@ -98,6 +107,21 @@ namespace InteractiveTutorials
             Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
+            
+            playerManager = Calls.Managers.GetPlayerManager();
+            playerBP = GetPlayerBP();
+        }
+        
+        // Borrowed this function from NichRumbleDev
+        // https://thunderstore.io/c/rumble/p/NichRumbleDev/ExtraBBRanks/source/
+        public int GetPlayerBP()  
+        {
+            if (playerManager.localPlayer != null)
+            {
+                return playerManager.localPlayer.Data.GeneralData.BattlePoints;
+            }
+            MelonLogger.Msg("localPlayer is null. Player data might not be initialized yet.");
+            return 0;
         }
         
         
@@ -124,221 +148,79 @@ namespace InteractiveTutorials
             }
         }
     }
-    
-   public class TutorialSelector
-{
-    public GameObject selectorText;
-    
-    public bool isRecording;
-    public bool isPlaying;
-    public bool isOnCooldown;
 
-    private ButtonWithLabel prevButton;
-    private ButtonWithLabel nextButton;
-    private ButtonWithLabel forwardBackButton;
-    private ButtonWithLabel playButton;
-    private ButtonWithLabel recordButton;
-    
-    public AudioManager.ClipData currentAudio;
-
-    public TutorialSelector(Vector3 vector, Quaternion rotation)
+    public class TutorialInfo
     {
-        string directoryName = "    " + Path.GetFileName(Main.selectedTutorial) + "    ";
-        
-        selectorText = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 
-            3f, Color.white, new Vector3(), Quaternion.Euler(0f, 0f, 0f));
-        
-        selectorText.transform.position = vector;
-        selectorText.name = "InteractiveTutorials";
-        selectorText.GetComponent<TextMeshPro>().text = directoryName;
+        public string name;
+        public BeltInfo.BeltEnum minimumBelt;
+        public string creator;
+        public string description;
+        public bool isPack;
 
-        // Define common button rotation
-        Quaternion buttonRotation = Quaternion.Euler(90, rotation.y - 180, 0);
-        
-        // Create buttons using ButtonWithLabel class
-        prevButton = new ButtonWithLabel(
-            selectorText.transform.position - new Vector3(0.3f, 0.4f, 0f),
-            buttonRotation,
-            "Previous",
-            "PrevButton",
-            selectorText.transform
-        );
-        
-        nextButton = new ButtonWithLabel(
-            selectorText.transform.position + new Vector3(0.3f, -0.4f, 0f),
-            buttonRotation,
-            "Next",
-            "NextButton",
-            selectorText.transform
-        );
-        
-        forwardBackButton = new ButtonWithLabel(
-            selectorText.transform.position + new Vector3(0.3f, 0.0f, 0f),
-            buttonRotation,
-            "Forward/Back",
-            "ForwardBackButton",
-            selectorText.transform
-        );
-        
-        playButton = new ButtonWithLabel(
-            selectorText.transform.position + new Vector3(0.0f, -0.6f, 0f),
-            buttonRotation,
-            "Start",
-            "PlayButton",
-            selectorText.transform
-        );
-        
-        recordButton = new ButtonWithLabel(
-            selectorText.transform.position + new Vector3(0.7f, -0.6f, 0f),
-            buttonRotation,
-            "Record",
-            "RecordButton",
-            selectorText.transform
-        );
-
-        // Set up event listeners - FIXED: Get child(0) for InteractionButton
-        prevButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => CycleTutorialBy(-1)));
-        nextButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => CycleTutorialBy(1)));
-        
-        forwardBackButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        public TutorialInfo(string name, BeltInfo.BeltEnum belt, string creator, string description, bool isPack = false)
         {
-            // TODO: Implement forward/back functionality
-        }));
-        
-        playButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
-        {
-            if (isRecording) return;
-            if (isPlaying) StopPlayback();
-            else PlayTutorial();
-        }));
-        
-        recordButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
-        {
-            if (isOnCooldown) return;
-            isOnCooldown = true;
-            MelonCoroutines.Start(CooldownCoroutine());
-            if (isPlaying) isPlaying = false;
-            MelonCoroutines.Start(HandleRecording());
-        }));
-
-        // Set selector rotation last to preserve button orientations
-        selectorText.transform.rotation = rotation;
-    }
-
-    private void StopPlayback()
-    {
-        CloneBendingAPI.StopClone();
-        isPlaying = false;
-        AudioManager.StopPlayback(currentAudio);
-    }
-        
-        
-        private void CycleTutorialBy(int number)
-        {
-            if (selectorText == null)
-            {
-                MelonLogger.Error("Cannot skip songs because mp3Text is null.");
-                return;
-            }
-
-            int currentIndex = Array.IndexOf(Main.tutorials, Main.selectedTutorial);
-            if (currentIndex == -1) return;
-
-            int newIndex = (currentIndex + number) % Main.tutorials.Length;
-            if (newIndex < 0) newIndex += Main.tutorials.Length; // Ensure valid index
-
-            string nextTutorial = Main.tutorials[newIndex];
-            Main.selectedTutorial = nextTutorial;
-
-            string actualDirName = Path.GetFileName(nextTutorial);
-            
-            ChangeSelectorText(actualDirName);
+            this.name = name;
+            this.minimumBelt = belt;
+            this.creator = creator;
+            this.description = description;
+            this.isPack = isPack;
         }
         
-        private void ChangeSelectorText(String text)
+        public static string ToJson(TutorialInfo tutorialInfo)
         {
-            selectorText.GetComponent<TextMeshPro>().text = text;
+            return JsonSerializer.Serialize(tutorialInfo);
         }
 
-        private void PlayTutorial()
+        public static TutorialInfo FromJson(string json)
         {
-            
-            MelonLogger.Msg("Playing Tutorial");
-            AudioManager.StopPlayback(currentAudio);
-            CloneBendingAPI.StopClone();
-            
-            string pathToClone = Path.Combine(Main.selectedTutorial, "clone.json");
-            string pathToAudio = Path.Combine(Main.selectedTutorial, "audio.wav");
-            CloneBendingAPI.LoadClone(pathToClone);
-            
-            CloneBendingAPI.PlayClone();
-            isPlaying = true;
-            currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
-        }
-        
-        
-        private IEnumerator HandleRecording()
-        {
-            if ( !isRecording )
-            {
-                GameObject modeTextObject = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 3f, Color.white, Vector3.zero, Quaternion.identity);
-                modeTextObject.GetComponent<TextMeshPro>().text = "   Lights   ";
-                modeTextObject.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
-                modeTextObject.transform.localPosition = new Vector3(0f, 0f, 1f);
-                modeTextObject.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
-            
-                yield return (object) new WaitForSeconds(1f);
-                modeTextObject.GetComponent<TextMeshPro>().text = "Camera";
-            
-                yield return (object) new WaitForSeconds(1f);
-                modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
-            
-                yield return (object) new WaitForSeconds(1f);
-                GameObject.Destroy(modeTextObject);
-            
-                CloneBendingAPI.StartRecording();
-                isRecording = true;
-                MicrophoneRecorder.StartRecording();
-            }
-            else
-            {
-                CloneBendingAPI.StopRecording();
-                MicrophoneRecorder.StopRecording();
-                CloneBendingAPI.SaveClone(Main.LocalRecordedPath);
-                isRecording = false;
-            }
-        }
-        
-        private IEnumerator CooldownCoroutine()
-        {
-            yield return new WaitForSeconds(1f);
-            isOnCooldown = false;
+            return JsonSerializer.Deserialize<TutorialInfo>(json);
         }
     }
 
-    public class ButtonWithLabel
+    public static class BeltInfo
     {
-        public GameObject button;
-        public GameObject label;
-
-        public ButtonWithLabel(Vector3 buttonLoc, Quaternion rotation , string labelText, string objectName, Transform parent)
+        public enum BeltEnum
         {
-            button = Calls.Create.NewButton(
-                buttonLoc - new Vector3(0.3f, 0.4f, 0f),
-                Quaternion.Euler(90, rotation.y - 180, 0));
-            
-            button.name = objectName;
-            
-            if (parent != null)
+            WHITE,
+            YELLOW,
+            GREEN,
+            BLUE,
+            RED,
+            BLACK
+        }
+
+        public static string GetNameFromBelt(BeltEnum belt)
+        {
+            switch (belt)
             {
-                button.transform.SetParent(parent, true);
+                case BeltEnum.WHITE:
+                    return "pebble";
+                case BeltEnum.YELLOW:
+                    return "cobble";
+                case BeltEnum.GREEN:
+                    return "boulder";
+                case BeltEnum.BLUE:
+                    return "tor";
+                case BeltEnum.RED:
+                    return "monolith";
+                case BeltEnum.BLACK:
+                    return "mountain";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(belt), belt, null);
             }
-            
-            label = Calls.Create.NewText(labelText, 0.5f, Color.white, Vector3.zero, Quaternion.Euler(0.0f, 0.0f, 0f));
-            label.transform.position = button.transform.position + new Vector3(0f, -0.1f, 0f);
-            label.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0f);
-            label.transform.SetParent(button.transform, true);
-            label.name = objectName + " label";
+        }
+
+        public static BeltEnum GetEnumFromBp(int bp) //Found this shenanigan on the internet, looks cool
+        {
+            return bp switch
+            {
+                >= 156 => BeltEnum.BLACK,
+                >= 96  => BeltEnum.RED,
+                >= 54  => BeltEnum.BLUE,
+                >= 30  => BeltEnum.GREEN,
+                >= 12  => BeltEnum.YELLOW,
+                _      => BeltEnum.WHITE
+            };
         }
     }
 }
