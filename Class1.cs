@@ -129,8 +129,8 @@ namespace InteractiveTutorials
             CloneBendingAPI.cloneBendingInstance = RegisteredMelons.FirstOrDefault
                 (mod => mod.GetType() == mainType) as CloneBending.MainClass;
 
-            Vector3 selectorLoc = new Vector3(-14.9161f, 1.6073f, 2.6538f);
-            Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 0f);
+            Vector3 selectorLoc = new Vector3(-15.0161f, 1.6073f, 3.4538f);
+            Quaternion rotation = Quaternion.Euler(1.0f, 66.1951f, 0f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             
             playerManager = Calls.Managers.GetPlayerManager();
@@ -203,7 +203,7 @@ namespace InteractiveTutorials
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
-        [JsonPropertyName("minimumBelt")]
+        [JsonPropertyName("belt")] // Changed from "minimumBelt" to match JSON key
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public BeltInfo.BeltEnum MinimumBelt { get; set; }
 
