@@ -12,6 +12,7 @@ public class TutorialSelector
 {
     public GameObject selectorText;
     public GameObject creatorText;
+    public GameObject beltText;
     public GameObject descriptionText;
     
     public bool isRecording;
@@ -21,7 +22,7 @@ public class TutorialSelector
     private ButtonWithLabel prevButton;
     private ButtonWithLabel nextButton;
     private ButtonWithLabel backButton;
-    private ButtonWithLabel selectButton;
+    private ButtonWithLabel selectPlayButton;
     private ButtonWithLabel recordButton;
     
     public AudioManager.ClipData currentAudio;
@@ -63,8 +64,18 @@ public class TutorialSelector
             1f, Color.green, vector, Quaternion.identity);
         creatorText.transform.position = new Vector3(0f,-0.25f, 0f);
         creatorText.name = "CreatorText";
-        creatorText.GetComponent<TextMeshPro>().text = "by: " + SelectedTutorialPack.tutorialPackInfo.Creator;
+        creatorText.GetComponent<TextMeshPro>().text = "PlaceHolder";
         creatorText.transform.SetParent(selectorText.transform, false);
+        
+        
+        beltText = Calls.Create.NewText("Placeholder text", //TODO finish
+            1f, Color.green, vector, Quaternion.identity);
+        beltText.transform.position = new Vector3(0f,0.0f, 1f);
+        beltText.name = "MinBeltText";
+        BeltInfo.BeltEnum minBelt = SelectedTutorialPack.tutorialPackInfo.MinimumBelt;
+        beltText.GetComponent<TextMeshPro>().text = "        PlaceHolder        ";
+        
+        beltText.transform.SetParent(selectorText.transform, false);
         
         // Define common button rotation
         Quaternion buttonRotation = Quaternion.Euler(90, rotation.y - 180, 0);
@@ -95,7 +106,7 @@ public class TutorialSelector
         );
         backButton.button.SetActive(false);
         
-        selectButton = new ButtonWithLabel(
+        selectPlayButton = new ButtonWithLabel(
             selectorText.transform.position + new Vector3(0.0f, -0.3f, 0f),
             buttonRotation,
             "Select",
@@ -129,7 +140,7 @@ public class TutorialSelector
             HandleSelectedTutorialUpdate();
         }));
         
-        selectButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        selectPlayButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
         {
             if (isRecording) return;
             if (isPlaying) StopPlayback();
@@ -147,38 +158,41 @@ public class TutorialSelector
 
         // Set selector rotation last to preserve button orientations
         selectorText.transform.rotation = rotation;
+
+        HandleSelectedTutorialUpdate();
     }
 
     private void HandleSelectedTutorialUpdate()
     {
-        Color color;
+        Color beltTextColour;
 
-        if (SelectedTutorialPack is Pack)
+        if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
         {
-            if ( Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt) )
-            {
-                color = Color.yellow;
-            }
-            else
-            {
-                color = Color.red;
-            }
+            beltTextColour = Color.green;
         }
         else
         {
-            if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-            {
-                color = Color.green;
-            }
-            else
-            {
-                color = Color.red;
-            }
+            beltTextColour = Color.red;
+        }
+
+        Color seletctorTextColour = Color.white;
+
+        if (SelectedTutorialPack is Pack)
+        {
+            seletctorTextColour = Color.yellow;
+
+            selectPlayButton.label.GetComponent<TextMeshPro>().text = "Select";
+        }
+        else
+        {
+            selectPlayButton.label.GetComponent<TextMeshPro>().text = "  Play  ";
         }
         
-        ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Creator,color);
-            
-        ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Name,color);
+        ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Creator,seletctorTextColour);
+        
+        string beltString = SelectedTutorialPack.tutorialPackInfo.MinimumBelt + "/" +
+                            BeltInfo.GetNameFromBelt(SelectedTutorialPack.tutorialPackInfo.MinimumBelt);
+        ChangeDescriptionTextAndColour(beltString,beltTextColour,SelectedTutorialPack.tutorialPackInfo.Description);
     }
 
     public void StopPlayback()
@@ -222,6 +236,26 @@ public class TutorialSelector
                 selectorText.GetComponent<TextMeshPro>().color = color;
             }
         }
+
+        private void ChangeDescriptionTextAndColour(String? beltString, Color beltColour, String descriptionString)
+        {
+            if (beltString != null)
+            {
+                beltText.GetComponent<TextMeshPro>().text = beltString;
+            }
+
+            if (beltColour != null)
+            {
+                beltText.GetComponent<TextMeshPro>().color = beltColour;
+            }
+
+            if (descriptionString != null)
+            {
+                descriptionText.GetComponent<TextMeshPro>().text = descriptionString;
+            }
+        }
+        
+        
 
         private void ChangeSelectorCreatorTextAndColour(String? text, Color color)
         {
