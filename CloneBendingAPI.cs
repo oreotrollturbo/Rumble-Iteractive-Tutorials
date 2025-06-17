@@ -185,9 +185,31 @@ public static class CloneBendingAPI
 
     public static void StopClone()
     {
-        MethodInfo stopCloneMethod = AccessTools.Method(cloneBendingType, "finishPlaying");
-
-        stopCloneMethod.Invoke(cloneBendingInstance, null);
+        try 
+        {
+            // Get MainClass instance
+            var mainClassType = Type.GetType("CloneBending.MainClass, CloneBending");
+            var instanceField = mainClassType.GetField("instance", BindingFlags.Public | BindingFlags.Static);
+            var instance = instanceField.GetValue(null);
+        
+            // Set isPlaying to false
+            var isPlayingField = mainClassType.GetField("isPlaying", BindingFlags.Static | BindingFlags.NonPublic);
+            isPlayingField.SetValue(null, false);
+        
+            // Deactivate clone objects
+            var clonePlayerField = mainClassType.GetField("clonePlayer", BindingFlags.Instance | BindingFlags.NonPublic);
+            var bodyDoubleField = mainClassType.GetField("bodyDouble", BindingFlags.Instance | BindingFlags.NonPublic);
+        
+            var clonePlayer = (GameObject)clonePlayerField.GetValue(instance);
+            var bodyDouble = (GameObject)bodyDoubleField.GetValue(instance);
+        
+            clonePlayer?.SetActive(false);
+            bodyDouble?.SetActive(false);
+        }
+        catch (Exception ex)
+        {
+            MelonLogger.Msg($"Error stopping clone: {ex.Message}");
+        }
     }
     
     [HarmonyPatch(typeof(MainClass), "uploadClone")]

@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CloneBending;
 using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
@@ -32,12 +33,7 @@ namespace InteractiveTutorials
         public static string FolderPath => Path.Combine(MelonEnvironment.UserDataDirectory, "InteractiveTutorials");
         public static string LocalRecordedPath => Path.Combine(FolderPath, "MyRecording");
         
-        public static string[] tutorials = Directory.GetDirectories(FolderPath);
-
-        // Try to find the directory named "Introduction"
-        public static string selectedTutorial = tutorials
-                                                    .FirstOrDefault(t => Path.GetFileName(t).Contains("Introduction", StringComparison.OrdinalIgnoreCase))
-                                                ?? tutorials[0]; // fallback to first if not found
+        public static List<TutorialPack> TutorialsAndPacks = new List<TutorialPack>();
 
         public static TutorialSelector? tutorialSelector;
 
@@ -64,6 +60,31 @@ namespace InteractiveTutorials
             {
                 Directory.CreateDirectory(LocalRecordedPath);
             }
+            
+            HandleTutorialList();
+        }
+
+        private static void HandleTutorialList()
+        {
+           string[] tutorialPaths = Directory.GetDirectories(FolderPath);
+
+           foreach (string path in tutorialPaths)
+           {
+               if (File.Exists(Path.Combine(path, "packInfo.json")))  // Pack logic
+               {
+                   string json = File.ReadAllText(Path.Combine(path, "packInfo.json"));
+                   TutorialInfo info = TutorialInfo.FromJson(json);
+                   Pack pack = new Pack(path,info); // Pass other required arguments if needed
+                   TutorialsAndPacks.Add(pack);
+               }
+               else if (File.Exists(Path.Combine(path, "tutorialInfo.json")))
+               {
+                   string json = File.ReadAllText(Path.Combine(path, "tutorialInfo.json"));
+                   TutorialInfo info = TutorialInfo.FromJson(json);
+                   Tutorial tutorial = new Tutorial(path,info);
+                   TutorialsAndPacks.Add(tutorial);
+               }
+           }
         }
         
         public void OnUIInit()
@@ -95,7 +116,11 @@ namespace InteractiveTutorials
             
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
-                tutorialSelector = null;
+                if (tutorialSelector != null)
+                {
+                    tutorialSelector.Delete();
+                    tutorialSelector = null;
+                }
                 return;
             }
             
@@ -104,7 +129,7 @@ namespace InteractiveTutorials
             CloneBendingAPI.cloneBendingInstance = RegisteredMelons.FirstOrDefault
                 (mod => mod.GetType() == mainType) as CloneBending.MainClass;
 
-            Vector3 selectorLoc = new Vector3(-14.9161f, 1.6887f, 2.6538f);
+            Vector3 selectorLoc = new Vector3(-14.9161f, 1.6073f, 2.6538f);
             Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             
@@ -149,31 +174,85 @@ namespace InteractiveTutorials
         }
     }
 
+    public class TutorialPack
+    {
+        public TutorialInfo tutorialPackInfo;
+        public string path;
+    }
+
+    public class Pack : TutorialPack
+    {
+        public Pack(string path, TutorialInfo tutorialPackInfo)
+        {
+            this.path = path;
+            this.tutorialPackInfo = tutorialPackInfo;
+        }
+    }
+
+    public class Tutorial : TutorialPack
+    {
+        public Tutorial(string path, TutorialInfo tutorialPackInfo)
+        {
+            this.path = path;
+            this.tutorialPackInfo = tutorialPackInfo;
+        }
+    }
+
     public class TutorialInfo
     {
-        public string name;
-        public BeltInfo.BeltEnum minimumBelt;
-        public string creator;
-        public string description;
-        public bool isPack;
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
 
-        public TutorialInfo(string name, BeltInfo.BeltEnum belt, string creator, string description, bool isPack = false)
+        [JsonPropertyName("minimumBelt")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public BeltInfo.BeltEnum MinimumBelt { get; set; }
+
+        [JsonPropertyName("creator")]
+        public string Creator { get; set; }
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; }
+
+        // Parameterless constructor required for deserialization
+        public TutorialInfo() { }
+
+        public TutorialInfo(string name, BeltInfo.BeltEnum minimumBelt, string creator, string description)
         {
-            this.name = name;
-            this.minimumBelt = belt;
-            this.creator = creator;
-            this.description = description;
-            this.isPack = isPack;
+            Name = name;
+            MinimumBelt = minimumBelt;
+            Creator = creator;
+            Description = description;
         }
-        
+    
         public static string ToJson(TutorialInfo tutorialInfo)
         {
-            return JsonSerializer.Serialize(tutorialInfo);
+            var options = new JsonSerializerOptions {
+                WriteIndented = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            return JsonSerializer.Serialize(tutorialInfo, options);
         }
 
         public static TutorialInfo FromJson(string json)
         {
-            return JsonSerializer.Deserialize<TutorialInfo>(json);
+            var options = new JsonSerializerOptions {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            return JsonSerializer.Deserialize<TutorialInfo>(json, options);
+        }
+
+        public static void CreateBlankInfoJson(string path)
+        {
+            var blankInfo = new TutorialInfo(
+                name: "Enter tutorial name here",
+                minimumBelt: BeltInfo.BeltEnum.WHITE,
+                creator: "Enter creator name here",
+                description: "Enter description here"
+            );
+
+            string json = ToJson(blankInfo);
+            File.WriteAllText(path, json);
         }
     }
 
@@ -222,5 +301,20 @@ namespace InteractiveTutorials
                 _      => BeltEnum.WHITE
             };
         }
+        
+        public static int GetBpFromEnum(BeltEnum belt)
+        {
+            return belt switch
+            {
+                BeltEnum.BLACK  => 156,
+                BeltEnum.RED    => 96,
+                BeltEnum.BLUE   => 54,
+                BeltEnum.GREEN  => 30,
+                BeltEnum.YELLOW => 12,
+                BeltEnum.WHITE  => 0,
+                _ => throw new ArgumentOutOfRangeException(nameof(belt), $"Unhandled belt: {belt}")
+            };
+        }
+
     }
 }
