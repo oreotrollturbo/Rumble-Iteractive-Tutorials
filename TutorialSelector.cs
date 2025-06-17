@@ -11,6 +11,8 @@ namespace InteractiveTutorials;
 public class TutorialSelector
 {
     public GameObject selectorText;
+    public GameObject creatorText;
+    public GameObject descriptionText;
     
     public bool isRecording;
     public bool isPlaying;
@@ -56,7 +58,14 @@ public class TutorialSelector
         selectorText.transform.position = vector;
         selectorText.name = "InteractiveTutorials";
         selectorText.GetComponent<TextMeshPro>().text = tutorialName;
-
+        
+        creatorText = Calls.Create.NewText("Placeholder text", 
+            1f, Color.green, vector, Quaternion.identity);
+        creatorText.transform.position = new Vector3(0f,-0.25f, 0f);
+        creatorText.name = "CreatorText";
+        creatorText.GetComponent<TextMeshPro>().text = "by: " + SelectedTutorialPack.tutorialPackInfo.Creator;
+        creatorText.transform.SetParent(selectorText.transform, false);
+        
         // Define common button rotation
         Quaternion buttonRotation = Quaternion.Euler(90, rotation.y - 180, 0);
         
@@ -117,32 +126,7 @@ public class TutorialSelector
             
             SelectedTutorialPack = CurrentList[0];
             
-            Color color;
-
-            if (SelectedTutorialPack is Pack)
-            {
-                if ( Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt) )
-                {
-                    color = Color.yellow;
-                }
-                else
-                {
-                    color = Color.red;
-                }
-            }
-            else
-            {
-                if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-                {
-                    color = Color.green;
-                }
-                else
-                {
-                    color = Color.red;
-                }
-            }
-            
-            ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Name,color);
+            HandleSelectedTutorialUpdate();
         }));
         
         selectButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
@@ -163,6 +147,38 @@ public class TutorialSelector
 
         // Set selector rotation last to preserve button orientations
         selectorText.transform.rotation = rotation;
+    }
+
+    private void HandleSelectedTutorialUpdate()
+    {
+        Color color;
+
+        if (SelectedTutorialPack is Pack)
+        {
+            if ( Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt) )
+            {
+                color = Color.yellow;
+            }
+            else
+            {
+                color = Color.red;
+            }
+        }
+        else
+        {
+            if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
+            {
+                color = Color.green;
+            }
+            else
+            {
+                color = Color.red;
+            }
+        }
+        
+        ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Creator,color);
+            
+        ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Name,color);
     }
 
     public void StopPlayback()
@@ -190,35 +206,8 @@ public class TutorialSelector
 
             TutorialPack nextTutorial = CurrentList[newIndex];
             SelectedTutorialPack = nextTutorial;
-
-            string tutorialName = nextTutorial.tutorialPackInfo.Name;
-
-            Color color;
-
-            if (SelectedTutorialPack is Pack)
-            {
-                if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-                {
-                    color = Color.yellow;
-                }
-                else
-                {
-                    color = Color.red;
-                }
-            }
-            else
-            {
-                if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-                {
-                    color = Color.green;
-                }
-                else
-                {
-                    color = Color.red;
-                }
-            }
             
-            ChangeSelectorTextAndColour(tutorialName, color);
+            HandleSelectedTutorialUpdate();
         }
         
         private void ChangeSelectorTextAndColour(String? text, Color color)
@@ -231,6 +220,19 @@ public class TutorialSelector
             if (color != null)
             {
                 selectorText.GetComponent<TextMeshPro>().color = color;
+            }
+        }
+
+        private void ChangeSelectorCreatorTextAndColour(String? text, Color color)
+        {
+            if (text != null)
+            {
+                creatorText.GetComponent<TextMeshPro>().text = text;
+            }
+
+            if (color != null)
+            {
+                creatorText.GetComponent<TextMeshPro>().color = color;
             }
         }
 
@@ -260,32 +262,7 @@ public class TutorialSelector
 
                 SelectedTutorialPack = CurrentList[0];
                 
-                Color color;
-
-                if (SelectedTutorialPack is Pack)
-                {
-                    if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-                    {
-                        color = Color.yellow;
-                    }
-                    else
-                    {
-                        color = Color.red;
-                    }
-                }
-                else
-                {
-                    if (Main.playerBP >= BeltInfo.GetBpFromEnum(SelectedTutorialPack.tutorialPackInfo.MinimumBelt))
-                    {
-                        color = Color.green;
-                    }
-                    else
-                    {
-                        color = Color.red;
-                    }
-                }
-                
-                ChangeSelectorTextAndColour(SelectedTutorialPack.tutorialPackInfo.Name,color);
+                HandleSelectedTutorialUpdate();
             }
             else
             {

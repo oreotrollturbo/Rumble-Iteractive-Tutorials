@@ -130,7 +130,7 @@ namespace InteractiveTutorials
                 (mod => mod.GetType() == mainType) as CloneBending.MainClass;
 
             Vector3 selectorLoc = new Vector3(-14.9161f, 1.6073f, 2.6538f);
-            Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 1.9727f);
+            Quaternion rotation = Quaternion.Euler(4.8401f, 355.3026f, 0f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             
             playerManager = Calls.Managers.GetPlayerManager();
