@@ -55,10 +55,12 @@ namespace InteractiveTutorials
                 MelonLogger.Warning("Creating tutorials directory");
                 Directory.CreateDirectory(FolderPath);
                 Directory.CreateDirectory(LocalRecordedPath);
+                TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
             else if (!Directory.Exists(LocalRecordedPath))
             {
                 Directory.CreateDirectory(LocalRecordedPath);
+                TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
             
             HandleTutorialList();
@@ -244,10 +246,12 @@ namespace InteractiveTutorials
 
         public static void CreateBlankInfoJson(string path)
         {
+            string name = Calls.Managers.GetPlayerManager().localPlayer.Data.GeneralData.PublicUsername;
+            
             var blankInfo = new TutorialInfo(
                 name: "Enter tutorial name here",
                 minimumBelt: BeltInfo.BeltEnum.WHITE,
-                creator: "Enter creator name here",
+                creator: name,
                 description: "Enter description here"
             );
 
