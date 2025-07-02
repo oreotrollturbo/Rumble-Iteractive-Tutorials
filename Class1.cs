@@ -66,7 +66,7 @@ namespace InteractiveTutorials
             HandleTutorialList();
         }
 
-        private static void HandleTutorialList()
+        public static void HandleTutorialList()
         {
            string[] tutorialPaths = Directory.GetDirectories(FolderPath);
 

@@ -24,6 +24,7 @@ public class TutorialSelector
     private BackButton backButton;
     private ButtonWithLabel selectPlayButton;
     private ButtonWithLabel recordButton;
+    private ButtonWithLabel refreshButton;
     
     public AudioManager.ClipData currentAudio;
     
@@ -144,6 +145,13 @@ public class TutorialSelector
             "RecordButton",
             selectorText.transform
         );
+        
+        refreshButton = new ButtonWithLabel(
+            new Vector3(0.7f, -0.5f, 0f),   // Local position offset
+            "Refresh",
+            "RefreshButton",
+            selectorText.transform
+        );
 
         
         prevButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => CycleTutorialBy(-1)));
@@ -181,12 +189,24 @@ public class TutorialSelector
         
         recordButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
         {
-            if (isOnCooldown) return;
+            if (isOnCooldown || isPlaying) return;
             isOnCooldown = true;
             MelonCoroutines.Start(CooldownCoroutine());
-            if (isPlaying) isPlaying = false;
             MelonCoroutines.Start(HandleRecording());
         }));
+        
+        refreshButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
+        {
+            Main.HandleTutorialList();
+            
+            CurrentList = Main.TutorialsAndPacks;
+            _mainListSelectedIndex = 0;
+            _mainListSelectedIndex = CurrentList.FindIndex(pack => pack.tutorialPackInfo.Name == "Introduction");
+            isBrowsingPack = false;
+            isOnCooldown = false;
+            HandleSelectedTutorialUpdate();
+        }));
+
 
         // Set selector rotation last to preserve button orientations
         selectorText.transform.rotation = rotation;
