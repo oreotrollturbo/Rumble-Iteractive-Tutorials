@@ -29,7 +29,7 @@ public class TutorialSelector
     public AudioManager.ClipData currentAudio;
     
     private TutorialPack SelectedTutorialPack;
-
+    
     private List<TutorialPack> CurrentList;
     private bool isBrowsingPack = false;
     private int _mainListSelectedIndex = 0; // Track main list selection
@@ -183,7 +183,11 @@ public class TutorialSelector
         selectPlayButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
         {
             if (isRecording) return;
-            if (isPlaying) StopPlayback();
+            if (isPlaying)
+            {
+                selectPlayButton.label.GetComponent<TextMeshPro>().text = "Play!";
+                StopPlayback();
+            }
             else SelectEntryButton();
         }));
         
@@ -379,6 +383,8 @@ public class TutorialSelector
             CloneBendingAPI.PlayClone();
             isPlaying = true;
             currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
+
+            selectPlayButton.label.GetComponent<TextMeshPro>().text = "Stop";
         }
     }
     
@@ -388,28 +394,55 @@ public class TutorialSelector
         if ( !isRecording )
         {
             GameObject modeTextObject = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 3f, Color.white, Vector3.zero, Quaternion.identity);
-            modeTextObject.GetComponent<TextMeshPro>().text = "   Lights   ";
+            
             modeTextObject.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
             modeTextObject.transform.localPosition = new Vector3(0f, 0f, 1f);
             modeTextObject.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+
+            int countDown = (int)Main.countDown.Value;
+
+            if (countDown <= 0)
+            {
+                modeTextObject.GetComponent<TextMeshPro>().text = "Lights";
         
-            yield return (object) new WaitForSeconds(1f);
-            modeTextObject.GetComponent<TextMeshPro>().text = "Camera";
+                yield return (object) new WaitForSeconds(1f);
+                modeTextObject.GetComponent<TextMeshPro>().text = "Camera";
         
-            yield return (object) new WaitForSeconds(1f);
-            modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
+                yield return (object) new WaitForSeconds(1f);
+                modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
         
-            yield return (object) new WaitForSeconds(1f);
+                yield return (object) new WaitForSeconds(1f);
+            }
+            else
+            {
+                while (-1 < countDown)
+                {
+                    if (countDown == 0)
+                    {
+                        modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
+                    }
+                    else
+                    {
+                        modeTextObject.GetComponent<TextMeshPro>().text = countDown.ToString();
+                    }
+                    
+                    yield return (object) new WaitForSeconds(1f);
+                    countDown--;
+                }
+            }
+            
+            
             GameObject.Destroy(modeTextObject);
-        
             CloneBendingAPI.StartRecording();
             isRecording = true;
             MicrophoneRecorder.StartRecording();
         }
         else
         {
-            CloneBendingAPI.StopRecording();
+            Main.CreateMyRecording();
+            
             MicrophoneRecorder.StopRecording();
+            CloneBendingAPI.StopRecording();
             CloneBendingAPI.SaveClone(Main.LocalRecordedPath);
             isRecording = false;
         }

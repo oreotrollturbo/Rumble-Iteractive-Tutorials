@@ -41,8 +41,7 @@ namespace InteractiveTutorials
 
         public static int playerBP;
 
-        public static ModSetting<bool> hearYourself;
-        public static ModSetting<int> microphoneIndex;
+        public static ModSetting<int> countDown;
         
         public override void OnLateInitializeMelon()
         {
@@ -50,6 +49,13 @@ namespace InteractiveTutorials
             Calls.onMapInitialized += SceneLoaded;
             UI.instance.UI_Initialized += OnUIInit;
             
+            CreateMyRecording();
+            
+            HandleTutorialList();
+        }
+
+        public static void CreateMyRecording()
+        {
             if (!Directory.Exists(FolderPath))
             {
                 MelonLogger.Warning("Creating tutorials directory");
@@ -62,8 +68,6 @@ namespace InteractiveTutorials
                 Directory.CreateDirectory(LocalRecordedPath);
                 TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
-            
-            HandleTutorialList();
         }
 
         public static void HandleTutorialList()
@@ -97,10 +101,7 @@ namespace InteractiveTutorials
             mod.AddDescription("Description", "A platform to create and share in-game tutorials with audio :)", BuildInfo.Description,
                 new Tags { IsSummary = true });
 
-            //hearYourself = mod.AddToList("Hear yourself", false, 1, "Plays your voice back as you are recording", new Tags());
-
-            // Corrected assignments: swapped variable names and labels
-            //microphoneIndex = mod.AddToList("Default microphone index", 0, "The index of your input device (change if audio doesnt record)", new Tags());
+            countDown = mod.AddToList("Count down", 0, "How long the mo counts down before starting the recording, if its 0 it goes to the mods default: 'lights, camera, action' ", new Tags());
 
             mod.GetFromFile();
 
@@ -246,10 +247,17 @@ namespace InteractiveTutorials
 
         public static void CreateBlankInfoJson(string path)
         {
+            MelonLogger.Msg("Creating blank json");
+            path = Path.Combine(path, "tutorialInfo.json");
             string name = Calls.Managers.GetPlayerManager().localPlayer.Data.GeneralData.PublicUsername;
+
+            if (name == null)
+            {
+                name = "Your name";
+            }
             
-            var blankInfo = new TutorialInfo(
-                name: "Enter tutorial name here",
+            TutorialInfo blankInfo = new TutorialInfo(
+                name: "Recorded tutorial",
                 minimumBelt: BeltInfo.BeltEnum.WHITE,
                 creator: name,
                 description: "Enter description here"
