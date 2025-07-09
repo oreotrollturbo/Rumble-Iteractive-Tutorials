@@ -403,7 +403,7 @@ public class TutorialSelector
 
             if (countDown <= 0)
             {
-                modeTextObject.GetComponent<TextMeshPro>().text = "Lights";
+                modeTextObject.GetComponent<TextMeshPro>().text = "    Lights    ";
         
                 yield return (object) new WaitForSeconds(1f);
                 modeTextObject.GetComponent<TextMeshPro>().text = "Camera";
