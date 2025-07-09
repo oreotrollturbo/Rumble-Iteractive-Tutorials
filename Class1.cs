@@ -61,12 +61,12 @@ namespace InteractiveTutorials
                 MelonLogger.Warning("Creating tutorials directory");
                 Directory.CreateDirectory(FolderPath);
                 Directory.CreateDirectory(LocalRecordedPath);
-                TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
+                //TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
             else if (!Directory.Exists(LocalRecordedPath))
             {
                 Directory.CreateDirectory(LocalRecordedPath);
-                TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
+                //TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
         }
 

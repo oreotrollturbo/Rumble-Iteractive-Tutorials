@@ -68,9 +68,14 @@ public class TutorialSelector
         selectorText.name = "InteractiveTutorials";
         
         TextMeshPro tmpSelectorText = selectorText.GetComponent<TextMeshPro>();
-        tmpSelectorText.text = tutorialName;
-        tmpSelectorText.enableWordWrapping = false;       // Prevents line breaks
-        tmpSelectorText.overflowMode = TextOverflowModes.Overflow; // Allows text to extend infinitely
+        tmpSelectorText.enableWordWrapping = true; // Enable wrapping
+        tmpSelectorText.overflowMode = TextOverflowModes.Overflow; // Allow vertical expansion
+        tmpSelectorText.alignment = TextAlignmentOptions.Center; // Center align text
+        tmpSelectorText.margin = new Vector4(0.1f, 0.1f, 0.1f, 0.1f); // Add small margin
+        
+        RectTransform rtSelector = selectorText.GetComponent<RectTransform>();
+        rtSelector.sizeDelta = new Vector2(3.0f, 0);
+        rtSelector.pivot = new Vector2(0.5f, 0.5f); 
         
         tutorialCreatorText = Calls.Create.NewText("Placeholder text", 
             1f, Color.white, vector, Quaternion.identity);
