@@ -49,24 +49,19 @@ namespace InteractiveTutorials
             Calls.onMapInitialized += SceneLoaded;
             UI.instance.UI_Initialized += OnUIInit;
             
-            CreateMyRecording();
+            CreateMyRecording(false);
             
             HandleTutorialList();
         }
 
-        public static void CreateMyRecording()
+        public static void CreateMyRecording(bool createJSON)
         {
-            if (!Directory.Exists(FolderPath))
+            MelonLogger.Warning("Creating tutorials directory");
+            Directory.CreateDirectory(LocalRecordedPath);
+
+            if (createJSON)
             {
-                MelonLogger.Warning("Creating tutorials directory");
-                Directory.CreateDirectory(FolderPath);
-                Directory.CreateDirectory(LocalRecordedPath);
-                //TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
-            }
-            else if (!Directory.Exists(LocalRecordedPath))
-            {
-                Directory.CreateDirectory(LocalRecordedPath);
-                //TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
+                TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
             }
         }
 
@@ -132,7 +127,7 @@ namespace InteractiveTutorials
             CloneBendingAPI.cloneBendingInstance = RegisteredMelons.FirstOrDefault
                 (mod => mod.GetType() == mainType) as CloneBending.MainClass;
 
-            Vector3 selectorLoc = new Vector3(-15.0161f, 1.6073f, 3.4538f);
+            Vector3 selectorLoc = new Vector3(-15.0161f, 1.5073f, 3.4538f); //TODO -0.10 when text is doubled
             Quaternion rotation = Quaternion.Euler(1.0f, 66.1951f, 0f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             

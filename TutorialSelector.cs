@@ -10,6 +10,8 @@ namespace InteractiveTutorials;
 
 public class TutorialSelector
 {
+    private GameObject playerFaceText; //TODO make me into a separate class dumbass
+    
     public GameObject selectorText;
     public GameObject tutorialCreatorText;
     public GameObject beltText;
@@ -34,6 +36,8 @@ public class TutorialSelector
     private bool isBrowsingPack = false;
     private int _mainListSelectedIndex = 0; // Track main list selection
 
+    private bool isCreatorTextDown = false;
+
     public TutorialSelector(Vector3 vector, Quaternion rotation)
     {
         CurrentList = Main.TutorialsAndPacks;
@@ -50,17 +54,23 @@ public class TutorialSelector
             selectorText.transform.position = vector;
             return; // Exit early
         }
+        
+        playerFaceText = Calls.Create.NewText("PlaceHolder", 3f, Color.white, Vector3.zero, Quaternion.identity);
+            
+        playerFaceText.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
+        playerFaceText.transform.localPosition = new Vector3(0f, 0f, 1f);
+        playerFaceText.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        playerFaceText.SetActive(false);
 
-        // Initialize main list selection
+        // Prioritise the "Introduction" tutorial, so it shows up always first :)
         _mainListSelectedIndex = CurrentList.FindIndex(
-            pack => pack.tutorialPackInfo.Name == "Introduction");
+            pack => pack.tutorialPackInfo.Name.Contains("Interactive"));
         
         if (_mainListSelectedIndex == -1) 
             _mainListSelectedIndex = 0;
         
         SelectedTutorialPack = CurrentList[_mainListSelectedIndex];
-    
-        string tutorialName = "            " + SelectedTutorialPack.tutorialPackInfo.Name + "            ";
+        
         selectorText = Calls.Create.NewText("Placeholder text", 
             3f, Color.green, vector, Quaternion.identity);
         selectorText.transform.rotation = rotation;
@@ -254,6 +264,17 @@ public class TutorialSelector
         string beltString = SelectedTutorialPack.tutorialPackInfo.MinimumBelt.ToString().ToLower() + "/" +
                             BeltInfo.GetNameFromBelt(SelectedTutorialPack.tutorialPackInfo.MinimumBelt);
         ChangeDescriptionTextAndColour("Belt required: " + beltString,beltTextColour, SelectedTutorialPack.tutorialPackInfo.Description);
+
+        if (IsTextWrapped() && !isCreatorTextDown)
+        {
+            tutorialCreatorText.transform.localPosition -= new Vector3(0f, 0.10f, 0f);
+            isCreatorTextDown = true;
+        }
+        else if (!IsTextWrapped() && isCreatorTextDown)
+        {
+            tutorialCreatorText.transform.localPosition += new Vector3(0f, 0.10f, 0f);
+            isCreatorTextDown = false;
+        }
     }
 
     public void StopPlayback()
@@ -326,19 +347,6 @@ public class TutorialSelector
             descriptionText.GetComponent<TextMeshPro>().text = descriptionString;
         }
     }
-    
-    private void ChangeSelectorCreatorTextAndColour(String? text, Color color)
-    {
-        if (text != null)
-        {
-            tutorialCreatorText.GetComponent<TextMeshPro>().text = text;
-        }
-
-        if (color != null)
-        {
-            tutorialCreatorText.GetComponent<TextMeshPro>().color = color;
-        }
-    }
 
     private void SelectEntryButton()
     {
@@ -398,23 +406,20 @@ public class TutorialSelector
     {
         if ( !isRecording )
         {
-            GameObject modeTextObject = Calls.Create.NewText("Lorem ipsum dolor sit amet long text so stuff fits better", 3f, Color.white, Vector3.zero, Quaternion.identity);
-            
-            modeTextObject.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
-            modeTextObject.transform.localPosition = new Vector3(0f, 0f, 1f);
-            modeTextObject.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
 
             int countDown = (int)Main.countDown.Value;
 
             if (countDown <= 0)
             {
-                modeTextObject.GetComponent<TextMeshPro>().text = "    Lights    ";
+                playerFaceText.SetActive(true);
+                
+                playerFaceText.GetComponent<TextMeshPro>().text = "    Lights    ";
         
                 yield return (object) new WaitForSeconds(1f);
-                modeTextObject.GetComponent<TextMeshPro>().text = "Camera";
+                playerFaceText.GetComponent<TextMeshPro>().text = "Camera";
         
                 yield return (object) new WaitForSeconds(1f);
-                modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
+                playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
         
                 yield return (object) new WaitForSeconds(1f);
             }
@@ -424,11 +429,11 @@ public class TutorialSelector
                 {
                     if (countDown == 0)
                     {
-                        modeTextObject.GetComponent<TextMeshPro>().text = "Action!";
+                        playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
                     }
                     else
                     {
-                        modeTextObject.GetComponent<TextMeshPro>().text = countDown.ToString();
+                        playerFaceText.GetComponent<TextMeshPro>().text = countDown.ToString();
                     }
                     
                     yield return (object) new WaitForSeconds(1f);
@@ -437,19 +442,24 @@ public class TutorialSelector
             }
             
             
-            GameObject.Destroy(modeTextObject);
+            playerFaceText.SetActive(false);
             CloneBendingAPI.StartRecording();
             isRecording = true;
             MicrophoneRecorder.StartRecording();
         }
         else
         {
-            Main.CreateMyRecording();
+            Main.CreateMyRecording(true);
             
             MicrophoneRecorder.StopRecording();
             CloneBendingAPI.StopRecording();
             CloneBendingAPI.SaveClone(Main.LocalRecordedPath);
             isRecording = false;
+            
+            playerFaceText.SetActive(true);
+            playerFaceText.GetComponent<TextMeshPro>().text = "Saved!";
+            yield return (object) new WaitForSeconds(2f);
+            playerFaceText.SetActive(false);
         }
     }
 
@@ -461,7 +471,6 @@ public class TutorialSelector
             CloneBendingAPI.StopClone();
             
             string pathToClone = Path.Combine(SelectedTutorialPack.path, "clone.json");
-            string pathToAudio = Path.Combine(SelectedTutorialPack.path, "audio.wav");
             CloneBendingAPI.LoadClone(pathToClone);
         
             GameObject.Destroy(selectorText);
@@ -473,6 +482,44 @@ public class TutorialSelector
     {
         yield return new WaitForSeconds(1f);
         isOnCooldown = false;
+    }
+    
+    private bool IsTextWrapped()
+    {
+        if (selectorText == null) 
+            return false;
+
+        TextMeshPro tmp = selectorText.GetComponent<TextMeshPro>();
+        if (tmp == null) 
+            return false;
+
+        // Force immediate mesh/line data update
+        tmp.ForceMeshUpdate();
+
+        // Get text info (line count, etc.)
+        TMP_TextInfo textInfo = tmp.textInfo;
+
+        // Case 1: No text = no wrap
+        if (textInfo.lineCount == 0) 
+            return false;
+
+        // Case 2: Multiple lines due to space constraints?
+        if (textInfo.lineCount > 1)
+        {
+            // Check if any line break was caused by width (not manual '\n')
+            for (int i = 0; i < textInfo.lineCount; i++)
+            {
+                TMP_LineInfo line = textInfo.lineInfo[i];
+                // If line break is caused by width (not newline character)
+                if (line.length < tmp.text.Length && 
+                    tmp.text[line.lastCharacterIndex] != '\n')
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
     
     public class ButtonWithLabel
