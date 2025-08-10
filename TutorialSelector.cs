@@ -36,6 +36,7 @@ public class TutorialSelector
     private bool isBrowsingPack = false;
     private int _mainListSelectedIndex = 0; // Track main list selection
 
+    // if the creator name text has been moved down to not do it again
     private bool isCreatorTextDown = false;
 
     public TutorialSelector(Vector3 vector, Quaternion rotation)
@@ -57,8 +58,8 @@ public class TutorialSelector
         
         playerFaceText = Calls.Create.NewText("PlaceHolder", 3f, Color.white, Vector3.zero, Quaternion.identity);
             
-        playerFaceText.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(1).transform.GetChild(0).transform.GetChild(0).transform;
-        playerFaceText.transform.localPosition = new Vector3(0f, 0f, 1f);
+        playerFaceText.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(2).GetChild(0).GetChild(0);
+        playerFaceText.transform.localPosition = new Vector3(0f, 0f, 1f); //TODO fixme
         playerFaceText.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
         playerFaceText.SetActive(false);
 
@@ -312,7 +313,7 @@ public class TutorialSelector
         HandleSelectedTutorialUpdate();
     }
         
-    private void ChangeSelectorTextAndColour(String? text, Color color, String creator)
+    private void ChangeSelectorTextAndColour(String text, Color color, String creator)
     {
         if (text != null)
         {
@@ -330,7 +331,7 @@ public class TutorialSelector
         }
     }
 
-    private void ChangeDescriptionTextAndColour(String? beltString, Color beltColour, String descriptionString)
+    private void ChangeDescriptionTextAndColour(String beltString, Color beltColour, String descriptionString)
     {
         if (beltString != null)
         {
@@ -425,6 +426,7 @@ public class TutorialSelector
             }
             else
             {
+                playerFaceText.SetActive(true);
                 while (-1 < countDown)
                 {
                     if (countDown == 0)
@@ -449,18 +451,23 @@ public class TutorialSelector
         }
         else
         {
-            Main.CreateMyRecording(true);
-            
-            MicrophoneRecorder.StopRecording();
-            CloneBendingAPI.StopRecording();
-            CloneBendingAPI.SaveClone(Main.LocalRecordedPath);
-            isRecording = false;
-            
-            playerFaceText.SetActive(true);
-            playerFaceText.GetComponent<TextMeshPro>().text = "Saved!";
-            yield return (object) new WaitForSeconds(2f);
-            playerFaceText.SetActive(false);
+            StopRecordingAndSave();
         }
+    }
+
+    public IEnumerator StopRecordingAndSave()
+    {
+        Main.CreateMyRecording(true);
+            
+        MicrophoneRecorder.StopRecording();
+        CloneBendingAPI.StopRecording();
+        CloneBendingAPI.SaveClone();
+        isRecording = false;
+            
+        playerFaceText.SetActive(true);
+        playerFaceText.GetComponent<TextMeshPro>().text = "Saved!";
+        yield return (object) new WaitForSeconds(2f);
+        playerFaceText.SetActive(false);
     }
 
     public void Delete()

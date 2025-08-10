@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CloneBending;
+using CloneBending2;
 using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppRUMBLE.Managers;
@@ -35,13 +35,16 @@ namespace InteractiveTutorials
         
         public static List<TutorialPack> TutorialsAndPacks = new List<TutorialPack>();
 
-        public static TutorialSelector? tutorialSelector;
+        public static TutorialSelector tutorialSelector;
 
         public static PlayerManager playerManager;
 
         public static int playerBP;
 
         public static ModSetting<int> countDown;
+
+        public static bool YButtonCooldown;
+        public static bool BButtonCooldown;
         
         public override void OnLateInitializeMelon()
         {
@@ -105,6 +108,34 @@ namespace InteractiveTutorials
             MelonLogger.Msg("Added Mod: " + BuildInfo.ModName);
         }
 
+        public override void OnUpdate()
+        {
+            // Handle right joystick
+            if ((double)Calls.ControllerMap.LeftController.GetSecondary() == 1.0 && !YButtonCooldown)
+            {
+                tutorialSelector.StopRecordingAndSave();
+                YButtonCooldown = true;
+                MelonCoroutines.Start(StartYButtonCooldown());
+            }
+            else if ((double)Calls.ControllerMap.LeftController.GetSecondary() == 1.0 && !BButtonCooldown)
+            {
+                BButtonCooldown = true;
+                MelonCoroutines.Start(StartBButtonCooldown());
+            }
+        }
+        
+        private IEnumerator StartYButtonCooldown()
+        {
+            yield return new WaitForSeconds(0.5f);
+            YButtonCooldown = false;
+        }
+        
+        private IEnumerator StartBButtonCooldown()
+        {
+            yield return new WaitForSeconds(0.5f);
+            BButtonCooldown = false;
+        }
+
         private void SceneLoaded()
         {
             if (tutorialSelector != null)
@@ -122,12 +153,12 @@ namespace InteractiveTutorials
                 return;
             }
             
-            Type mainType = typeof(MainClass);
+            Type mainType = typeof(Core);
             CloneBendingAPI.cloneBendingType = mainType;
             CloneBendingAPI.cloneBendingInstance = RegisteredMelons.FirstOrDefault
-                (mod => mod.GetType() == mainType) as CloneBending.MainClass;
+                (mod => mod.GetType() == mainType) as CloneBending2.Core;
 
-            Vector3 selectorLoc = new Vector3(-15.0161f, 1.5073f, 3.4538f); //TODO -0.10 when text is doubled
+            Vector3 selectorLoc = new Vector3(-15.0161f, 1.5073f, 3.4538f);
             Quaternion rotation = Quaternion.Euler(1.0f, 66.1951f, 0f);
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             
@@ -148,15 +179,15 @@ namespace InteractiveTutorials
         }
         
         
-        [HarmonyPatch(typeof(MainClass), "finishPlaying")]
+        [HarmonyPatch(typeof(Core), "finishPlaying")]
         public static class UploadClonePatch
         {
-            static void Postfix(MainClass __instance, ref IEnumerator __result)
+            static void Postfix(Core __instance, ref IEnumerator __result)
             {
                 __result = FinishPlayingWrapper(__instance, __result);
             }
 
-            private static IEnumerator FinishPlayingWrapper(MainClass instance, IEnumerator original)
+            private static IEnumerator FinishPlayingWrapper(Core instance, IEnumerator original)
             {
                 yield return original;
 

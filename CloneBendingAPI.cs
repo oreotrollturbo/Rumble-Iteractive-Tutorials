@@ -3,7 +3,7 @@ using System.IO;
 using System.Collections;
 using System.Reflection;
 using System.Reflection.Emit;
-using CloneBending;
+using CloneBending2;
 using RumbleModdingAPI;
 using MelonLoader;
 using HarmonyLib;
@@ -39,7 +39,7 @@ public static class CloneBendingAPI
     public static Type cloneBendingType;
     public static MelonLogger.Instance LoggerInstance;
     
-    public static void SaveClone(string? path) //TODO
+    public static void SaveClone()
     {
         Type cloneType = cloneBendingType;
         MethodInfo cloneMethod = AccessTools.Method(cloneType, "downloadClone");
@@ -69,7 +69,7 @@ public static class CloneBendingAPI
         }
     }
     
-    public static void LoadClone(string? path)
+    public static void LoadClone(string path)
     {
         Type cloneType = cloneBendingType;
         MethodInfo cloneMethod = AccessTools.Method(cloneType, "uploadClone");
@@ -187,8 +187,8 @@ public static class CloneBendingAPI
     {
         try 
         {
-            // Get MainClass instance
-            var mainClassType = Type.GetType("CloneBending.MainClass, CloneBending");
+            // Get Main Class instance
+            var mainClassType = Type.GetType("CloneBending2.Core, CloneBending2");
             var instanceField = mainClassType.GetField("instance", BindingFlags.Public | BindingFlags.Static);
             var instance = instanceField.GetValue(null);
         
@@ -212,7 +212,7 @@ public static class CloneBendingAPI
         }
     }
     
-    [HarmonyPatch(typeof(MainClass), "uploadClone")]
+    [HarmonyPatch(typeof(Core), "uploadClone")]
     public static class UploadClonePatch
     {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -231,4 +231,5 @@ public static class CloneBendingAPI
             return codes.AsEnumerable();
         }
     }
+    
 }

@@ -2,7 +2,7 @@
 using System.IO;
 using NAudio.Wave;
 using MelonLoader;
-
+#nullable disable
 namespace InteractiveTutorials;
 
     public class MicrophoneRecorder
@@ -19,14 +19,14 @@ namespace InteractiveTutorials;
                 waveIn.WaveFormat = new WaveFormat(44100, 1); // 44.1 kHz mono
 
                 writer = new WaveFileWriter(filePath, waveIn.WaveFormat);
-                waveIn.DataAvailable += (s, a) =>
+                waveIn.DataAvailable += (object s, WaveInEventArgs a) =>
                 {
                     writer.Write(a.Buffer, 0, a.BytesRecorded);
                 };
 
-                waveIn.RecordingStopped += (s, a) =>
+                waveIn.RecordingStopped += (object s, StoppedEventArgs a) =>
                 {
-                    writer?.Dispose();
+                    if (writer != null) writer.Dispose();
                     waveIn.Dispose();
                     MelonLogger.Msg("Recording stopped and saved.");
                 };
@@ -44,7 +44,7 @@ namespace InteractiveTutorials;
         {
             try
             {
-                waveIn?.StopRecording();
+                if (waveIn != null) waveIn.StopRecording();
             }
             catch (Exception ex)
             {
