@@ -13,6 +13,7 @@ using RumbleModUI;
 using UnityEngine;
 using AudioManager = CustomBattleMusic.AudioManager;
 using BuildInfo = InteractiveTutorials.BuildInfo;
+using Object = System.Object;
 
 [assembly: MelonInfo(typeof(InteractiveTutorials.Main), BuildInfo.ModName, BuildInfo.ModVersion, BuildInfo.Author)]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
@@ -44,7 +45,7 @@ namespace InteractiveTutorials
         public static ModSetting<int> countDown;
 
         public static bool YButtonCooldown;
-        public static bool BButtonCooldown;
+        public static bool AButtonCooldown;
         
         public override void OnLateInitializeMelon()
         {
@@ -77,14 +78,14 @@ namespace InteractiveTutorials
                if (File.Exists(Path.Combine(path, "packInfo.json")))  // Pack logic
                {
                    string json = File.ReadAllText(Path.Combine(path, "packInfo.json"));
-                   TutorialInfo info = TutorialInfo.FromJson(json);
+                   TutorialInfo info = FromJson<TutorialInfo>(json);
                    Pack pack = new Pack(path,info); // Pass other required arguments if needed
                    TutorialsAndPacks.Add(pack);
                }
                else if (File.Exists(Path.Combine(path, "tutorialInfo.json")))
                {
                    string json = File.ReadAllText(Path.Combine(path, "tutorialInfo.json"));
-                   TutorialInfo info = TutorialInfo.FromJson(json);
+                   TutorialInfo info = FromJson<TutorialInfo>(json);
                    Tutorial tutorial = new Tutorial(path,info);
                    TutorialsAndPacks.Add(tutorial);
                }
@@ -110,17 +111,19 @@ namespace InteractiveTutorials
 
         public override void OnUpdate()
         {
-            // Handle right joystick
+            if (tutorialSelector == null) return;
             if ((double)Calls.ControllerMap.LeftController.GetSecondary() == 1.0 && !YButtonCooldown)
             {
-                tutorialSelector.StopRecordingAndSave();
+                //Add logic for a future button
+                
                 YButtonCooldown = true;
                 MelonCoroutines.Start(StartYButtonCooldown());
             }
-            else if ((double)Calls.ControllerMap.LeftController.GetSecondary() == 1.0 && !BButtonCooldown)
+            if (tutorialSelector.isRecording && Calls.ControllerMap.RightController.GetPrimary() == 1.0 && !AButtonCooldown)
             {
-                BButtonCooldown = true;
-                MelonCoroutines.Start(StartBButtonCooldown());
+                tutorialSelector.SaveEvent();
+                AButtonCooldown = true;
+                MelonCoroutines.Start(StartAButtonCooldown());
             }
         }
         
@@ -130,10 +133,10 @@ namespace InteractiveTutorials
             YButtonCooldown = false;
         }
         
-        private IEnumerator StartBButtonCooldown()
+        private IEnumerator StartAButtonCooldown()
         {
             yield return new WaitForSeconds(0.5f);
-            BButtonCooldown = false;
+            AButtonCooldown = false;
         }
 
         private void SceneLoaded()
@@ -142,7 +145,7 @@ namespace InteractiveTutorials
             {
                 tutorialSelector.StopPlayback();
             }
-            
+    
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
                 if (tutorialSelector != null)
@@ -163,7 +166,15 @@ namespace InteractiveTutorials
             tutorialSelector = new TutorialSelector(selectorLoc,rotation);
             
             playerManager = Calls.Managers.GetPlayerManager();
-            playerBP = GetPlayerBP();
+
+            if (playerManager == null || playerManager.localPlayer == null)
+            {
+                MelonLogger.Warning("PlayerManager or localPlayer is null during SceneLoaded.");
+            }
+            else
+            {
+                playerBP = GetPlayerBP();
+            }
         }
         
         // Borrowed this function from NichRumbleDev
@@ -178,6 +189,27 @@ namespace InteractiveTutorials
             return 0;
         }
         
+        public static string ToJson<T>(T obj)
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            return JsonSerializer.Serialize(obj, options);
+        }
+
+        public static T FromJson<T>(string json)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            return JsonSerializer.Deserialize<T>(json, options);
+        }
+
+        
         
         [HarmonyPatch(typeof(Core), "finishPlaying")]
         public static class UploadClonePatch
@@ -191,14 +223,47 @@ namespace InteractiveTutorials
             {
                 yield return original;
 
-                 tutorialSelector.isPlaying = false;
+                tutorialSelector.isPlaying = false;
         
-                // Only stop if we have a valid clip
+                // Add null check here too
                 if (tutorialSelector.currentAudio != null)
                 {
                     AudioManager.StopPlayback(tutorialSelector.currentAudio);
-                    tutorialSelector.currentAudio = null; // Clear the reference after stopping
+                    tutorialSelector.currentAudio = null;
                 }
+            }
+        }
+
+        public static void HandleEvent(TutorialSelector.eventEnum eventEnum)
+        {
+            switch (eventEnum)
+            {
+                case TutorialSelector.eventEnum.DISABLE_PLAYER_MODEL:
+                    GameObject player = GameObject.Find("Player Controller(Clone)");
+                    if (player != null && player.transform.childCount > 1)
+                    {
+                        GameObject playerVisuals = player.transform.GetChild(1).gameObject;
+                        playerVisuals.SetActive(!playerVisuals.activeSelf);
+                    }
+                    else
+                    {
+                        MelonLogger.Warning("Player Controller or child not found in HandleEvent(DISABLE_PLAYER_MODEL)");
+                    }
+                    break;
+            }
+        }
+
+        public static void ShowPlayerModel(bool toggle)
+        {
+            GameObject player = GameObject.Find("Player Controller(Clone)");
+            if (player != null && player.transform.childCount > 1)
+            {
+                GameObject playerVisuals = player.transform.GetChild(1).gameObject;
+                playerVisuals.SetActive(toggle);
+            }
+            else
+            {
+                MelonLogger.Warning("Player Controller or child not found in ShowPlayerModel");
             }
         }
     }
@@ -252,24 +317,6 @@ namespace InteractiveTutorials
             Creator = creator;
             Description = description;
         }
-    
-        public static string ToJson(TutorialInfo tutorialInfo)
-        {
-            var options = new JsonSerializerOptions {
-                WriteIndented = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
-            return JsonSerializer.Serialize(tutorialInfo, options);
-        }
-
-        public static TutorialInfo FromJson(string json)
-        {
-            var options = new JsonSerializerOptions {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
-            return JsonSerializer.Deserialize<TutorialInfo>(json, options);
-        }
 
         public static void CreateBlankInfoJson(string path)
         {
@@ -289,7 +336,7 @@ namespace InteractiveTutorials
                 description: "Enter description here"
             );
 
-            string json = ToJson(blankInfo);
+            string json = Main.ToJson(blankInfo);
             File.WriteAllText(path, json);
         }
     }

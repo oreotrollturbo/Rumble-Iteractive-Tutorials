@@ -1,5 +1,8 @@
 ﻿using System.Collections;
+using System.Text.Json;
+using CloneBending2;
 using CustomBattleMusic;
+using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppTMPro;
 using MelonLoader;
@@ -10,7 +13,7 @@ namespace InteractiveTutorials;
 
 public class TutorialSelector
 {
-    private GameObject playerFaceText; //TODO make me into a separate class dumbass
+    private GameObject playerFaceText;
     
     public GameObject selectorText;
     public GameObject tutorialCreatorText;
@@ -39,6 +42,10 @@ public class TutorialSelector
     // if the creator name text has been moved down to not do it again
     private bool isCreatorTextDown = false;
 
+    private List<TutorialEvent> recordedEventList;
+    private List<TutorialEvent> currentEventList;
+    private long timeStartedRecording;
+    
     public TutorialSelector(Vector3 vector, Quaternion rotation)
     {
         CurrentList = Main.TutorialsAndPacks;
@@ -59,9 +66,13 @@ public class TutorialSelector
         playerFaceText = Calls.Create.NewText("PlaceHolder", 3f, Color.white, Vector3.zero, Quaternion.identity);
             
         playerFaceText.transform.parent = Calls.Players.GetLocalPlayer().Controller.transform.GetChild(2).GetChild(0).GetChild(0);
-        playerFaceText.transform.localPosition = new Vector3(0f, 0f, 1f); //TODO fixme
+        playerFaceText.transform.localPosition = new Vector3(0f, 0f, 1f);
         playerFaceText.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
         playerFaceText.SetActive(false);
+        
+        TextMeshPro tmpPlayerFaceText = playerFaceText.GetComponent<TextMeshPro>();
+        tmpPlayerFaceText.enableWordWrapping = false; // Disable word wrapping
+        tmpPlayerFaceText.overflowMode = TextOverflowModes.Overflow; // Allow text to overflow
 
         // Prioritise the "Introduction" tutorial, so it shows up always first :)
         _mainListSelectedIndex = CurrentList.FindIndex(
@@ -123,7 +134,6 @@ public class TutorialSelector
         RectTransform rt = descriptionText.GetComponent<RectTransform>();
         rt.pivot = new Vector2(0.5f, 1f);
         
-
         
         // Create buttons using ButtonWithLabel class
         prevButton = new ButtonWithLabel(
@@ -201,7 +211,6 @@ public class TutorialSelector
             if (isRecording) return;
             if (isPlaying)
             {
-                selectPlayButton.label.GetComponent<TextMeshPro>().text = "Play!";
                 StopPlayback();
             }
             else SelectEntryButton();
@@ -212,7 +221,7 @@ public class TutorialSelector
             if (isOnCooldown || isPlaying) return;
             isOnCooldown = true;
             MelonCoroutines.Start(CooldownCoroutine());
-            MelonCoroutines.Start(HandleRecording());
+            HandleRecording();
         }));
         
         refreshButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(() => 
@@ -282,7 +291,30 @@ public class TutorialSelector
     {
         CloneBendingAPI.StopClone();
         isPlaying = false;
-        AudioManager.StopPlayback(currentAudio);
+
+        // Add null check before stopping audio
+        if (currentAudio != null)
+        {
+            AudioManager.StopPlayback(currentAudio);
+            currentAudio = null;
+        }
+        else
+        {
+            MelonLogger.Warning("Attempted to stop null audio clip");
+        }
+
+        selectPlayButton.label.GetComponent<TextMeshPro>().text = "Play!";
+    
+        if (currentEventList != null)
+        {
+            foreach (TutorialEvent tutorialEvent in currentEventList)
+            {
+                if (tutorialEvent.eventType.Equals(eventEnum.DISABLE_PLAYER_MODEL))
+                {
+                    Main.ShowPlayerModel(true);
+                }
+            }
+        }
     }
         
         
@@ -374,7 +406,7 @@ public class TutorialSelector
                 }
                 
                 string json = File.ReadAllText(Path.Combine(path, "tutorialInfo.json"));
-                TutorialInfo info = TutorialInfo.FromJson(json);
+                TutorialInfo info = Main.FromJson<TutorialInfo>(json);
                 Tutorial tutorial = new Tutorial(path,info);
                 CurrentList.Add(tutorial);
             }
@@ -390,84 +422,174 @@ public class TutorialSelector
             CloneBendingAPI.StopClone();
             
             string pathToClone = Path.Combine(SelectedTutorialPack.path, "clone.json");
+            string pathToEvents = Path.Combine(SelectedTutorialPack.path, "events.json");
             string pathToAudio = Path.Combine(SelectedTutorialPack.path, "audio.wav");
+
+            if (File.Exists(pathToEvents))
+            {
+                string eventJson = File.ReadAllText(pathToEvents);
+
+                currentEventList = JsonSerializer.Deserialize<List<TutorialEvent>>(eventJson);
+
+                MelonCoroutines.Start(HandleEventExecution());
+            }
+            
             CloneBendingAPI.LoadClone(pathToClone);
         
             MelonLogger.Msg("Playing Tutorial");
             CloneBendingAPI.PlayClone();
             isPlaying = true;
             currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
+            if (currentAudio == null)
+            {
+                MelonLogger.Warning("Failed to load audio file");
+            }
 
             selectPlayButton.label.GetComponent<TextMeshPro>().text = "Stop";
         }
     }
+
+    private IEnumerator HandleEventExecution()
+    {
+        float lastEventTriggerTime = 0f;
+        foreach (TutorialEvent tutorialEvent in currentEventList)
+        {
+            yield return (object) new WaitForSeconds(tutorialEvent.triggerTime - lastEventTriggerTime);
+            if (!isRecording) break;
+            Main.HandleEvent(tutorialEvent.eventType);
+            lastEventTriggerTime += tutorialEvent.triggerTime;
+            MelonLogger.Msg("Looped once");
+        }
+    }
     
     
-    private IEnumerator HandleRecording()
+    
+    private void HandleRecording()
     {
         if ( !isRecording )
         {
-
-            int countDown = (int)Main.countDown.Value;
-
-            if (countDown <= 0)
-            {
-                playerFaceText.SetActive(true);
-                
-                playerFaceText.GetComponent<TextMeshPro>().text = "    Lights    ";
-        
-                yield return (object) new WaitForSeconds(1f);
-                playerFaceText.GetComponent<TextMeshPro>().text = "Camera";
-        
-                yield return (object) new WaitForSeconds(1f);
-                playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
-        
-                yield return (object) new WaitForSeconds(1f);
-            }
-            else
-            {
-                playerFaceText.SetActive(true);
-                while (-1 < countDown)
-                {
-                    if (countDown == 0)
-                    {
-                        playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
-                    }
-                    else
-                    {
-                        playerFaceText.GetComponent<TextMeshPro>().text = countDown.ToString();
-                    }
-                    
-                    yield return (object) new WaitForSeconds(1f);
-                    countDown--;
-                }
-            }
-            
-            
-            playerFaceText.SetActive(false);
-            CloneBendingAPI.StartRecording();
-            isRecording = true;
-            MicrophoneRecorder.StartRecording();
+            MelonCoroutines.Start(StartRecording());
         }
         else
         {
-            StopRecordingAndSave();
+            MelonCoroutines.Start(StopRecordingAndSave());
         }
+    }
+
+    public IEnumerator StartRecording()
+    {
+        int countDown = (int)Main.countDown.Value;
+
+        if (countDown <= 0)
+        {
+            playerFaceText.SetActive(true);
+                
+            playerFaceText.GetComponent<TextMeshPro>().text = "     Lights     ";
+        
+            yield return (object) new WaitForSeconds(1f);
+            playerFaceText.GetComponent<TextMeshPro>().text = "Camera";
+        
+            yield return (object) new WaitForSeconds(1f);
+            playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
+        
+            yield return (object) new WaitForSeconds(1f);
+        }
+        else
+        {
+            playerFaceText.SetActive(true);
+            while (-1 < countDown)
+            {
+                if (countDown == 0)
+                {
+                    playerFaceText.GetComponent<TextMeshPro>().text = "Action!";
+                }
+                else
+                {
+                    playerFaceText.GetComponent<TextMeshPro>().text = countDown.ToString();
+                }
+                    
+                yield return (object) new WaitForSeconds(1f);
+                countDown--;
+            }
+        }
+            
+            
+        playerFaceText.SetActive(false);
+        CloneBendingAPI.StartRecording();
+        isRecording = true;
+        MicrophoneRecorder.StartRecording();
+
+        recordedEventList = new List<TutorialEvent>();
+        timeStartedRecording = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
 
     public IEnumerator StopRecordingAndSave()
     {
+        MelonLogger.Msg("Stopped recording!");
         Main.CreateMyRecording(true);
             
         MicrophoneRecorder.StopRecording();
         CloneBendingAPI.StopRecording();
         CloneBendingAPI.SaveClone();
+        SaveEventsJson();
         isRecording = false;
+        
             
         playerFaceText.SetActive(true);
         playerFaceText.GetComponent<TextMeshPro>().text = "Saved!";
         yield return (object) new WaitForSeconds(2f);
         playerFaceText.SetActive(false);
+    }
+
+    private void SaveEventsJson()
+    {
+        if (recordedEventList == null || recordedEventList.Count == 0)
+        {
+            MelonLogger.Msg("No events to save");
+            return;
+        }
+
+        MelonLogger.Msg("Saving events json");
+        string path = Path.Combine(Main.LocalRecordedPath, "events.json");
+    
+        var options = new JsonSerializerOptions {
+            WriteIndented = true
+        };
+    
+        string json = JsonSerializer.Serialize(recordedEventList, options);
+        File.WriteAllText(path, json);
+    
+        MelonLogger.Msg($"Saved {recordedEventList.Count} events to {path}");
+    }
+    
+
+    public void SaveEvent()
+    {
+        float timeDelay = (float)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(timeStartedRecording)).TotalSeconds;
+
+        TutorialEvent tutorialEvent = new TutorialEvent(timeDelay,eventEnum.DISABLE_PLAYER_MODEL);
+    
+        recordedEventList.Add(tutorialEvent);
+        MelonLogger.Msg($"Event saved at {timeDelay} seconds");
+    }
+    
+    public class TutorialEvent
+    {
+        public float triggerTime { get; set; }
+        public eventEnum eventType { get; set; }
+
+        public TutorialEvent(float triggerTime, eventEnum eventType)
+        {
+            this.triggerTime = triggerTime;
+            this.eventType = eventType;
+        }
+
+        public TutorialEvent() {}
+    }
+    
+    public enum eventEnum
+    {
+        DISABLE_PLAYER_MODEL,
     }
 
     public void Delete()

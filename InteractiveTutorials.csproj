@@ -13,6 +13,9 @@
       <Reference Include="CloneBending2">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\CloneBending2.dll</HintPath>
       </Reference>
+      <Reference Include="Il2CppBucketheadEntertainment.Plugins">
+        <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\Il2CppBucketheadEntertainment.Plugins.dll</HintPath>
+      </Reference>
       <Reference Include="Il2CppInterop.Runtime">
         <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath>
       </Reference>

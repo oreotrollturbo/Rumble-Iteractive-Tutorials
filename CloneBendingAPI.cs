@@ -232,4 +232,20 @@ public static class CloneBendingAPI
         }
     }
     
+    [HarmonyPatch(typeof(Core), "OnUpdate")]
+    public static class CloneBendingUpdatePatch
+    {
+        static bool Prefix(Core __instance)
+        {
+            if ((double) Calls.ControllerMap.RightController.GetJoystickClick() == 1.0 && Main.tutorialSelector.isRecording)
+            {
+                MelonLogger.Msg("Joyschtick pressed stopping recording!");
+                MelonCoroutines.Start(Main.tutorialSelector.StopRecordingAndSave());
+                return false;
+            }
+
+            return true;
+        }
+    }
+    
 }
