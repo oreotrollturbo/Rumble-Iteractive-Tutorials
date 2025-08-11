@@ -303,7 +303,14 @@ public class TutorialSelector
             MelonLogger.Warning("Attempted to stop null audio clip");
         }
 
-        selectPlayButton.label.GetComponent<TextMeshPro>().text = "Play!";
+        if (selectPlayButton != null && selectPlayButton.label != null)
+        {
+            var tmp = selectPlayButton.label.GetComponent<TextMeshPro>();
+            if (tmp != null)
+            {
+                tmp.text = "Play!";
+            }
+        }
     
         if (currentEventList != null)
         {
@@ -420,6 +427,8 @@ public class TutorialSelector
         {
             AudioManager.StopPlayback(currentAudio);
             CloneBendingAPI.StopClone();
+            
+            CloneBendingAPI.ReCreateClone();
             
             string pathToClone = Path.Combine(SelectedTutorialPack.path, "clone.json");
             string pathToEvents = Path.Combine(SelectedTutorialPack.path, "events.json");

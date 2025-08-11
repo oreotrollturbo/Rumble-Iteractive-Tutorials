@@ -1,14 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Collections;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Reflection.Emit;
 using CloneBending2;
 using RumbleModdingAPI;
 using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
-using Directory = Il2CppSystem.IO.Directory;
 using Path = Il2CppSystem.IO.Path;
 
 namespace InteractiveTutorials;
@@ -72,9 +68,9 @@ public static class CloneBendingAPI
     public static void LoadClone(string path)
     {
         Type cloneType = cloneBendingType;
-        MethodInfo cloneMethod = AccessTools.Method(cloneType, "uploadClone");
+        MethodInfo uploadCloneMethod = AccessTools.Method(cloneType, "uploadClone");
     
-        if (cloneMethod == null)
+        if (uploadCloneMethod == null)
         {
             LoggerInstance.Error("Method not found!");
             return;
@@ -92,7 +88,7 @@ public static class CloneBendingAPI
         
         try
         {
-            cloneMethod.Invoke(cloneBendingInstance, new object[] { null, EventArgs.Empty });
+            uploadCloneMethod.Invoke(cloneBendingInstance, new object[] { null, EventArgs.Empty });
             LoggerInstance.Msg("Uploading clone");
         }
         catch (Exception ex)
@@ -210,6 +206,33 @@ public static class CloneBendingAPI
         {
             MelonLogger.Msg($"Error stopping clone: {ex.Message}");
         }
+    }
+
+    public static void ReCreateClone()
+    {
+        GameObject funcClone = GameObject.Find("FunctionalClone");
+        GameObject bodyDouble = GameObject.Find("BodyDouble");
+
+        if (funcClone != null)
+        {
+            GameObject.DestroyImmediate(funcClone);
+        }
+        
+        if (bodyDouble != null)
+        {
+            GameObject.DestroyImmediate(bodyDouble);
+        }
+        
+        Type cloneType = cloneBendingType;
+        MethodInfo createCloneMethod = AccessTools.Method(cloneType, "setup");
+        
+        if (createCloneMethod == null)
+        {
+            LoggerInstance.Error("Create clone method not found!");
+            return;
+        }
+        
+        createCloneMethod.Invoke(cloneBendingInstance, null);
     }
     
     [HarmonyPatch(typeof(Core), "uploadClone")]

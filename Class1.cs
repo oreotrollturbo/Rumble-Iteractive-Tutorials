@@ -3,9 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CloneBending2;
 using HarmonyLib;
-using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppRUMBLE.Managers;
-using Il2CppTMPro;
 using RumbleModdingAPI;
 using MelonLoader;
 using MelonLoader.Utils;
@@ -13,7 +11,6 @@ using RumbleModUI;
 using UnityEngine;
 using AudioManager = CustomBattleMusic.AudioManager;
 using BuildInfo = InteractiveTutorials.BuildInfo;
-using Object = System.Object;
 
 [assembly: MelonInfo(typeof(InteractiveTutorials.Main), BuildInfo.ModName, BuildInfo.ModVersion, BuildInfo.Author)]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
