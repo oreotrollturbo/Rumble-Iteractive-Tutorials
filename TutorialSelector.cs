@@ -236,7 +236,6 @@ public class TutorialSelector
             HandleSelectedTutorialUpdate();
         }));
 
-
         // Set selector rotation last to preserve button orientations
         selectorText.transform.rotation = rotation;
 
@@ -316,10 +315,7 @@ public class TutorialSelector
         {
             foreach (TutorialEvent tutorialEvent in currentEventList)
             {
-                if (tutorialEvent.eventType.Equals(eventEnum.DISABLE_PLAYER_MODEL))
-                {
-                    Main.ShowPlayerModel(true);
-                }
+                tutorialEvent.HandleTutorialEnd();
             }
         }
     }
@@ -463,10 +459,10 @@ public class TutorialSelector
         float lastEventTriggerTime = 0f;
         foreach (TutorialEvent tutorialEvent in currentEventList)
         {
-            yield return (object) new WaitForSeconds(tutorialEvent.triggerTime - lastEventTriggerTime);
+            yield return (object) new WaitForSeconds(tutorialEvent.TriggerTime - lastEventTriggerTime);
             if (!isRecording) break;
-            Main.HandleEvent(tutorialEvent.eventType);
-            lastEventTriggerTime += tutorialEvent.triggerTime;
+            tutorialEvent.ExecuteEvent();
+            lastEventTriggerTime += tutorialEvent.TriggerTime;
             MelonLogger.Msg("Looped once");
         }
     }
@@ -576,31 +572,119 @@ public class TutorialSelector
     {
         float timeDelay = (float)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(timeStartedRecording)).TotalSeconds;
 
-        TutorialEvent tutorialEvent = new TutorialEvent(timeDelay,eventEnum.DISABLE_PLAYER_MODEL);
+        TutorialEvent tutorialEvent = new DisablePlayerModelEvent(timeDelay);
     
         recordedEventList.Add(tutorialEvent);
         MelonLogger.Msg($"Event saved at {timeDelay} seconds");
     }
     
-    public class TutorialEvent
+    public abstract class TutorialEvent
     {
-        public float triggerTime { get; set; }
-        public eventEnum eventType { get; set; }
+        public float TriggerTime { get;  set; }
 
-        public TutorialEvent(float triggerTime, eventEnum eventType)
+        protected TutorialEvent(float triggerTime)
         {
-            this.triggerTime = triggerTime;
-            this.eventType = eventType;
+            TriggerTime = triggerTime;
         }
 
-        public TutorialEvent() {}
-    }
-    
-    public enum eventEnum
-    {
-        DISABLE_PLAYER_MODEL,
+        public abstract void ExecuteEvent();
+        /**
+         * This is used to end any permanent effects an event might have,
+         * Best case scenario it is useless ,
+         * but we cant assume everyone handles their events responsibly
+         */
+        public abstract void HandleTutorialEnd();
     }
 
+    public class DisablePlayerModelEvent : TutorialEvent
+    {
+        public DisablePlayerModelEvent(float triggerTime) : base(triggerTime) { }
+
+        public override void ExecuteEvent()
+        {
+            GameObject player = GameObject.Find("Player Controller(Clone)");
+            if (player != null && player.transform.childCount > 1)
+            {
+                GameObject playerVisuals = player.transform.GetChild(1).gameObject;
+                playerVisuals.SetActive(!playerVisuals.activeSelf);
+            }
+            else
+            {
+                MelonLogger.Warning("Player Controller or child not found in HandleEvent(DISABLE_PLAYER_MODEL)");
+            }
+        }
+
+        public override void HandleTutorialEnd()
+        {
+            GameObject player = GameObject.Find("Player Controller(Clone)");
+            if (player != null && player.transform.childCount > 1)
+            {
+                GameObject playerVisuals = player.transform.GetChild(1).gameObject;
+                playerVisuals.SetActive(false);
+            }
+            else
+            {
+                MelonLogger.Warning("Player Controller or child not found in ShowPlayerModel");
+            }
+        }
+    }
+    
+    public class CreateTextBoxEvent : TutorialEvent //TODO 
+    {
+        public string text;
+        public Color colour;
+        public float timeExisting;
+        public float size;
+        public Vector3 location;
+
+        private GameObject textBox;
+        public CreateTextBoxEvent(float triggerTime, string text, float timeExisting,Vector3 location, Color colour,float size) : base(triggerTime)
+        {
+            this.text = text;
+            this.timeExisting = timeExisting;
+            this.location = location;
+            this.colour = colour;
+            this.size = size;
+        }
+        public override void ExecuteEvent()
+        {
+            Vector3 playerLocation = GameObject.Find("Player Controller(Clone)").transform.position;
+            Quaternion lookRotation = GetFlatLookRotation(location,playerLocation);
+
+            textBox = Calls.Create.NewText(text,size,colour,location,lookRotation);
+            MelonCoroutines.Start(DeleteTextAfterDelay());
+        }
+
+        private IEnumerator DeleteTextAfterDelay()
+        {
+            yield return new WaitForSeconds(timeExisting);
+            if (textBox != null)
+            {
+                GameObject.Destroy(textBox);
+            }
+        }
+        
+        public override void HandleTutorialEnd()
+        {
+            if (textBox != null)
+            {
+                GameObject.Destroy(textBox);
+            }
+        }
+        
+        public static Quaternion GetFlatLookRotation(Vector3 from, Vector3 to)
+        {
+            Vector3 dir = to - from;
+            dir.y = 0; //Ignore Y difference
+            if (dir.sqrMagnitude < 0.0001f) // in case the position is the same
+                return Quaternion.identity;
+
+            return Quaternion.LookRotation(dir.normalized, Vector3.up);
+        }
+    }
+
+    
+    
     public void Delete()
     {
         try

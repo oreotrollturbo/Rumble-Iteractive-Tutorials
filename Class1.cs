@@ -42,7 +42,7 @@ namespace InteractiveTutorials
         public static ModSetting<int> countDown;
 
         public static bool YButtonCooldown;
-        public static bool AButtonCooldown;
+        public static bool XButtonCooldown;
         
         public override void OnLateInitializeMelon()
         {
@@ -116,11 +116,11 @@ namespace InteractiveTutorials
                 YButtonCooldown = true;
                 MelonCoroutines.Start(StartYButtonCooldown());
             }
-            if (tutorialSelector.isRecording && Calls.ControllerMap.RightController.GetPrimary() == 1.0 && !AButtonCooldown)
+            if (tutorialSelector.isRecording && Calls.ControllerMap.LeftController.GetPrimary() == 1.0 && !XButtonCooldown)
             {
                 tutorialSelector.SaveEvent();
-                AButtonCooldown = true;
-                MelonCoroutines.Start(StartAButtonCooldown());
+                XButtonCooldown = true;
+                MelonCoroutines.Start(StartXButtonCooldown());
             }
         }
         
@@ -130,10 +130,10 @@ namespace InteractiveTutorials
             YButtonCooldown = false;
         }
         
-        private IEnumerator StartAButtonCooldown()
+        private IEnumerator StartXButtonCooldown()
         {
             yield return new WaitForSeconds(0.5f);
-            AButtonCooldown = false;
+            XButtonCooldown = false;
         }
 
         private void SceneLoaded()
@@ -228,39 +228,6 @@ namespace InteractiveTutorials
                     AudioManager.StopPlayback(tutorialSelector.currentAudio);
                     tutorialSelector.currentAudio = null;
                 }
-            }
-        }
-
-        public static void HandleEvent(TutorialSelector.eventEnum eventEnum)
-        {
-            switch (eventEnum)
-            {
-                case TutorialSelector.eventEnum.DISABLE_PLAYER_MODEL:
-                    GameObject player = GameObject.Find("Player Controller(Clone)");
-                    if (player != null && player.transform.childCount > 1)
-                    {
-                        GameObject playerVisuals = player.transform.GetChild(1).gameObject;
-                        playerVisuals.SetActive(!playerVisuals.activeSelf);
-                    }
-                    else
-                    {
-                        MelonLogger.Warning("Player Controller or child not found in HandleEvent(DISABLE_PLAYER_MODEL)");
-                    }
-                    break;
-            }
-        }
-
-        public static void ShowPlayerModel(bool toggle)
-        {
-            GameObject player = GameObject.Find("Player Controller(Clone)");
-            if (player != null && player.transform.childCount > 1)
-            {
-                GameObject playerVisuals = player.transform.GetChild(1).gameObject;
-                playerVisuals.SetActive(toggle);
-            }
-            else
-            {
-                MelonLogger.Warning("Player Controller or child not found in ShowPlayerModel");
             }
         }
     }
