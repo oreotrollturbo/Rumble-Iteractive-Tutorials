@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace InteractiveTutorials;
 
-public class TutorialSelector //TODO make the tiny tutorial selector that will  serve for the logs
+public class TutorialSelector
 { //TODO create the final youtube video
     private GameObject playerFaceText;
 

@@ -14,7 +14,7 @@ public class TutorialSelectorJr
 
     public TutorialSelectorJr(Vector3 location, Quaternion rotation, string tutorialPath)
     {
-        string logName = Path.GetDirectoryName(tutorialPath);
+        string logName = Path.GetFileName(Path.GetDirectoryName(tutorialPath));;
         
         selectorText = Calls.Create.NewText(logName,
             3f, Color.white, location, Quaternion.identity);
