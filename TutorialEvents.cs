@@ -10,9 +10,22 @@ namespace InteractiveTutorials;
 public class TutorialEvents
 {
     
+    public static List<TutorialEvent> LoadEventsJson(string eventJson)
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters =
+            {
+                new TutorialEventConverter(),
+                new ColorConverter(),
+                new Vector3Converter()
+            }
+        };
     
+        return JsonSerializer.Deserialize<List<TutorialEvent>>(eventJson, options);
+    }
     
-    public static void SaveEventsJson(List<TutorialEvent> recordedEventList)
+    public static void SaveEventsJson(List<TutorialEvent> recordedEventList, string path)
     {
         if (recordedEventList == null || recordedEventList.Count == 0)
         {
@@ -21,7 +34,6 @@ public class TutorialEvents
         }
 
         MelonLogger.Msg("Saving events json");
-        string path = Path.Combine(Main.LocalRecordedPath, "events.json");
 
         var options = new JsonSerializerOptions
         {
@@ -56,18 +68,18 @@ public class TutorialEvents
 
     
     [JsonConverter(typeof(TutorialEventConverter))]
-public abstract class TutorialEvent
-{
-    public float TriggerTime { get; set; }
-
-    protected TutorialEvent(float triggerTime)
+    public abstract class TutorialEvent
     {
-        TriggerTime = triggerTime;
+        public float TriggerTime { get; set; }
+    
+        protected TutorialEvent(float triggerTime)
+        {
+            TriggerTime = triggerTime;
+        }
+    
+        public abstract void ExecuteEvent();
+        public abstract void HandleTutorialEnd();
     }
-
-    public abstract void ExecuteEvent();
-    public abstract void HandleTutorialEnd();
-}
 
 // Custom converter for TutorialEvent hierarchy
 public class TutorialEventConverter : JsonConverter<TutorialEvent>
@@ -82,7 +94,7 @@ public class TutorialEventConverter : JsonConverter<TutorialEvent>
 
         string typeDiscriminator = typeElement.GetString();
 
-        return typeDiscriminator switch
+        return typeDiscriminator switch //TODO add stuff here
         {
             "GenericEvent" => JsonSerializer.Deserialize<GenericEvent>(root.GetRawText(), options),
             "TogglePlayerModelEvent" => JsonSerializer.Deserialize<TogglePlayerModelEvent>(root.GetRawText(), options),

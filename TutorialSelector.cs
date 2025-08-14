@@ -1,9 +1,5 @@
 ﻿using System.Collections;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using CloneBending2;
 using CustomBattleMusic;
-using HarmonyLib;
 using Il2CppRUMBLE.Interactions.InteractionBase;
 using Il2CppTMPro;
 using MelonLoader;
@@ -12,8 +8,8 @@ using UnityEngine;
 
 namespace InteractiveTutorials;
 
-public class TutorialSelector
-{
+public class TutorialSelector //TODO make the tiny tutorial selector that will  serve for the logs
+{ //TODO create the final youtube video
     private GameObject playerFaceText;
 
     public GameObject selectorText;
@@ -218,7 +214,7 @@ public class TutorialSelector
                 {
                     StopPlayback();
                 }
-                else SelectEntryButton();
+                else SelectOrPlayButton();
             }));
 
         recordButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(
@@ -393,10 +389,10 @@ public class TutorialSelector
         }
     }
 
-    private void SelectEntryButton()
+    private void SelectOrPlayButton()
     {
         if (SelectedTutorialPack is Pack)
-        {
+        { //Handle opening a pack
             // Save current position before switching lists
             if (!isBrowsingPack)
             {
@@ -429,38 +425,57 @@ public class TutorialSelector
             HandleSelectedTutorialUpdate();
         }
         else
-        {
-            AudioManager.StopPlayback(currentAudio);
-            CloneBendingAPI.StopClone();
-
-            CloneBendingAPI.ReCreateClone();
-
-            string pathToClone = Path.Combine(SelectedTutorialPack.path, "clone.json");
-            string pathToEvents = Path.Combine(SelectedTutorialPack.path, "events.json");
-            string pathToAudio = Path.Combine(SelectedTutorialPack.path, "audio.wav");
-
-            if (File.Exists(pathToEvents))
-            {
-                string eventJson = File.ReadAllText(pathToEvents);
-
-                currentEventList = JsonSerializer.Deserialize<List<TutorialEvents.TutorialEvent>>(eventJson);
-
-                MelonCoroutines.Start(HandleEventExecution());
-            }
-
-            CloneBendingAPI.LoadClone(pathToClone);
-
-            MelonLogger.Msg("Playing Tutorial");
-            CloneBendingAPI.PlayClone();
-            isPlaying = true;
-            currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
-            if (currentAudio == null)
-            {
-                MelonLogger.Warning("Failed to load audio file");
-            }
-
-            selectPlayButton.label.GetComponent<TextMeshPro>().text = "Stop";
+        { 
+            PlayTutorial();
         }
+    }
+
+    public void PlayTutorial(string pathOverride = null)
+    {
+        string path = SelectedTutorialPack.path;
+
+        if (pathOverride != null)
+        {
+            path = pathOverride;
+        }
+        
+        AudioManager.StopPlayback(currentAudio);
+        CloneBendingAPI.StopClone();
+
+        CloneBendingAPI.ReCreateClone();
+
+        string pathToClone = Path.Combine(path, "clone.json");
+        string pathToEvents = Path.Combine(path, "events.json");
+        string pathToAudio = Path.Combine(path, "audio.wav");
+
+        if (!File.Exists(pathToAudio))
+        {
+            string actualPath = Path.Combine(path, "metadata.json");
+            
+            File.Move(actualPath,pathToAudio);
+        }
+
+        if (File.Exists(pathToEvents))
+        {
+            string eventJson = File.ReadAllText(pathToEvents);
+
+            currentEventList = TutorialEvents.LoadEventsJson(eventJson);
+
+            MelonCoroutines.Start(HandleEventExecution());
+        }
+
+        CloneBendingAPI.LoadClone(pathToClone);
+
+        MelonLogger.Msg("Playing Tutorial");
+        CloneBendingAPI.PlayClone();
+        isPlaying = true;
+        currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
+        if (currentAudio == null)
+        {
+            MelonLogger.Warning("Failed to load audio file");
+        }
+
+        selectPlayButton.label.GetComponent<TextMeshPro>().text = "Stop";
     }
 
     private IEnumerator HandleEventExecution()
@@ -545,7 +560,8 @@ public class TutorialSelector
         MicrophoneRecorder.StopRecording();
         CloneBendingAPI.StopRecording();
         CloneBendingAPI.SaveClone();
-        TutorialEvents.SaveEventsJson(recordedEventList);
+        string path = Path.Combine(Main.LocalRecordedPath, "events.json");
+        TutorialEvents.SaveEventsJson(recordedEventList,path);
         isRecording = false;
 
 
@@ -557,7 +573,7 @@ public class TutorialSelector
 
     public void SaveEvent()
     {
-        TutorialEvents.SaveEvent(recordedEventList,timeStartedRecording);
+        recordedEventList = TutorialEvents.SaveEvent(recordedEventList,timeStartedRecording);
     }
     
     

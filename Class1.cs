@@ -25,7 +25,7 @@ namespace InteractiveTutorials
         public const string Author = "oreotrollturbo";
     }
     
-    public class Main : MelonMod
+    public class Main : MelonMod //TODO fix/test the countdown method to use for logs
     {
         private Mod mod = new Mod();
         public static string FolderPath => Path.Combine(MelonEnvironment.UserDataDirectory, "InteractiveTutorials");
@@ -43,6 +43,12 @@ namespace InteractiveTutorials
 
         public static bool YButtonCooldown;
         public static bool XButtonCooldown;
+
+        private static List<TutorialSelectorJr> logPlayers = new List<TutorialSelectorJr>();
+        private static bool hasFreedClone = false;
+        
+        private static GameObject groundColider1;
+        private static GameObject groundColider2;
         
         public override void OnLateInitializeMelon()
         {
@@ -50,9 +56,39 @@ namespace InteractiveTutorials
             Calls.onMapInitialized += SceneLoaded;
             UI.instance.UI_Initialized += OnUIInit;
             
+            SetupExampleJson();
             CreateMyRecording(false);
             
             HandleTutorialList();
+        }
+
+        /**
+         * Add every new event type here so there is an example for all of them
+         */
+        private static void SetupExampleJson()
+        {
+            List<TutorialEvents.TutorialEvent> exampleList = new List<TutorialEvents.TutorialEvent>();
+
+            TutorialEvents.TogglePlayerModelEvent playerModelEvent = new TutorialEvents.TogglePlayerModelEvent(
+                triggerTime: 0f
+                );
+            
+            exampleList.Add(playerModelEvent);
+            
+            TutorialEvents.CreateTextBoxEvent textBoxEvent = new TutorialEvents.CreateTextBoxEvent(
+                triggerTime: 0f,
+                text: "Example text",
+                timeExisting: 5f,
+                location: new Vector3(0f,0f,0f),
+                colour: Color.blue,
+                size: 5f
+            );
+            
+            exampleList.Add(textBoxEvent);
+
+            string path = Path.Combine(FolderPath,"exampleEvents.json");
+            
+            TutorialEvents.SaveEventsJson(exampleList,path);
         }
 
         public static void CreateMyRecording(bool createJSON)
@@ -63,6 +99,52 @@ namespace InteractiveTutorials
             if (createJSON)
             {
                 TutorialInfo.CreateBlankInfoJson(LocalRecordedPath);
+            }
+        }
+
+        private static void CreateLogPlayers()
+        {
+            string path = Path.Combine(FolderPath, "HELP ME");
+            if (Directory.Exists(path))
+            {
+                hasFreedClone = true;
+                
+                string log1Path = Path.Combine(path, "log1");
+                string log2Path = Path.Combine(path, "log2");
+                string log3Path = Path.Combine(path, "log3");
+
+                Vector3 log1Loc = new Vector3(-43.1422f, 9.7706f, -14.8722f);
+                Quaternion log1Rot = Quaternion.Euler(0f, 206.6285f, 0f);
+                TutorialSelectorJr log1Player = new TutorialSelectorJr(
+                    location: log1Loc,
+                    rotation: log1Rot,
+                    tutorialPath: log1Path
+                    );
+                logPlayers.Add(log1Player);
+                
+                Vector3 log2Loc = new Vector3(-26.4121f, -1.4936f, 5.115f);
+                Quaternion log2Rot = Quaternion.Euler(0f, 66.3497f, 0f);
+                TutorialSelectorJr log2Player = new TutorialSelectorJr(
+                    location: log2Loc,
+                    rotation: log2Rot,
+                    tutorialPath: log2Path
+                );
+                logPlayers.Add(log2Player);
+                
+                Vector3 log3Loc = new Vector3(14.3332f, -0.9762f, 3.0303f);
+                Quaternion log3Rot = Quaternion.Euler(0f, 159.9691f, 0f);
+                TutorialSelectorJr log3Player = new TutorialSelectorJr(
+                    location: log3Loc,
+                    rotation: log3Rot,
+                    tutorialPath: log3Path
+                );
+                logPlayers.Add(log3Player);
+                
+                Vector3 loc1 = new Vector3(-29.849f, -3.3591f, 5.2964f); //-2.1
+                groundColider1 = GroundCreator.CreateGroundCollider(loc1,10f);
+            
+                Vector3 loc2 = new Vector3(13.426f, -3.0762f, 2.8757f);
+                groundColider2 = GroundCreator.CreateGroundCollider(loc2,4f);
             }
         }
 
@@ -145,6 +227,15 @@ namespace InteractiveTutorials
     
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
+                if (groundColider1 != null)
+                {
+                    GameObject.Destroy(groundColider1);
+                }
+                if (groundColider2 != null)
+                {
+                    GameObject.Destroy(groundColider2);
+                }
+
                 if (tutorialSelector != null)
                 {
                     tutorialSelector.Delete();
@@ -172,6 +263,8 @@ namespace InteractiveTutorials
             {
                 playerBP = GetPlayerBP();
             }
+            
+            CreateLogPlayers();
         }
         
         // Borrowed this function from NichRumbleDev
