@@ -43,6 +43,8 @@ public class TutorialSelector
     private List<TutorialEvents.TutorialEvent> currentEventList;
     private long timeStartedRecording;
 
+    private bool hasPlayedArgTutorial = false;
+
     public TutorialSelector(Vector3 vector, Quaternion rotation)
     {
         CurrentList = Main.TutorialsAndPacks;
@@ -212,7 +214,7 @@ public class TutorialSelector
                 if (isRecording) return;
                 if (isPlaying)
                 {
-                    StopPlayback();
+                    StopPlayback(true);
                 }
                 else SelectOrPlayButton();
             }));
@@ -291,8 +293,13 @@ public class TutorialSelector
         }
     }
 
-    public void StopPlayback()
+    public void StopPlayback(bool wasForceStop = false)
     {
+        if (wasForceStop && hasPlayedArgTutorial)
+        {
+            return;
+        }
+        
         CloneBendingAPI.StopClone();
         isPlaying = false;
 
@@ -323,6 +330,38 @@ public class TutorialSelector
                 tutorialEvent.HandleTutorialEnd();
             }
         }
+
+        if (hasPlayedArgTutorial)
+        {
+            string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
+
+            string audioPath = Path.Combine(mainPath, "audio.wav");
+            string clonePath = Path.Combine(mainPath, "clone.json");
+            
+            
+            File.Delete(audioPath);
+            File.Delete(clonePath);
+            
+            string oldValue = "\"description\": \"Thank you so much\"";
+            string newValue = "\"description\": \"I am still here just invisible so that I don't annoy you, just dont touch the log players\"";
+            
+            ChangeArgJsonText(oldValue,newValue);
+            
+            Main.CreateLogPlayers();
+        }
+    }
+
+    public static void ChangeArgJsonText(string oldText, string newText) //TODO test me please
+    {
+        string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
+        
+        string infoPath = Path.Combine(mainPath, "tutorialInfo.json");
+            
+        string json = File.ReadAllText(infoPath);
+
+        json.Replace(oldText, newText);
+            
+        File.WriteAllText(infoPath, json);
     }
 
 
@@ -432,6 +471,8 @@ public class TutorialSelector
 
     public void PlayTutorial(string pathOverride = null)
     {
+        hasPlayedArgTutorial = IsArgTutorial(SelectedTutorialPack.tutorialPackInfo);
+        
         string path = SelectedTutorialPack.path;
 
         if (pathOverride != null)
@@ -460,8 +501,10 @@ public class TutorialSelector
             string eventJson = File.ReadAllText(pathToEvents);
 
             currentEventList = TutorialEvents.LoadEventsJson(eventJson);
+            
+            MelonLogger.Msg("Events loaded " + currentEventList.Count);
 
-            MelonCoroutines.Start(HandleEventExecution());
+            HandleEventExecution();
         }
 
         CloneBendingAPI.LoadClone(pathToClone);
@@ -474,23 +517,36 @@ public class TutorialSelector
         {
             MelonLogger.Warning("Failed to load audio file");
         }
+        else
+        {
+            MelonCoroutines.Start(ScheduleTutorialEnd((float)currentAudio.Duration.TotalSeconds + 1));
+        }
 
         selectPlayButton.label.GetComponent<TextMeshPro>().text = "Stop";
     }
 
-    private IEnumerator HandleEventExecution()
+    private IEnumerator ScheduleTutorialEnd(float time)
     {
-        float lastEventTriggerTime = 0f;
-        foreach (TutorialEvents.TutorialEvent tutorialEvent in currentEventList)
-        {
-            yield return (object)new WaitForSeconds(tutorialEvent.TriggerTime - lastEventTriggerTime);
-            if (!isRecording) break;
-            tutorialEvent.ExecuteEvent();
-            lastEventTriggerTime += tutorialEvent.TriggerTime;
-            MelonLogger.Msg("Looped once");
-        }
+        yield return (object)new WaitForSeconds(time);
+        
+        StopPlayback();
     }
 
+    private bool IsArgTutorial(TutorialInfo info)
+    {
+        return info.MinimumBelt.Equals(BeltInfo.BeltEnum.BLACK) && info.Description.Equals("Thank you so much")
+                                                                && info.Name.Equals("oreotrollturbo") &&
+                                                                info.Creator.Equals("oreotrollturbo");
+    }
+
+    private void HandleEventExecution()
+    {
+        MelonLogger.Msg("Handling events");
+        foreach (TutorialEvents.TutorialEvent tutorialEvent in currentEventList)
+        {
+            MelonCoroutines.Start(tutorialEvent.HandleEventDelayedExecution());
+        }
+    }
 
 
     private void HandleRecording()

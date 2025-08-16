@@ -14,7 +14,7 @@ public class TutorialSelectorJr
 
     public TutorialSelectorJr(Vector3 location, Quaternion rotation, string tutorialPath)
     {
-        string logName = Path.GetFileName(Path.GetDirectoryName(tutorialPath));;
+        string logName = Path.GetFileName(tutorialPath);
         
         selectorText = Calls.Create.NewText(logName,
             3f, Color.white, location, Quaternion.identity);
@@ -48,6 +48,11 @@ public class TutorialSelectorJr
                     tmp.text = "Stop";
                     
                     Main.tutorialSelector.PlayTutorial(tutorialPath);
+                    
+                    string oldValue = "\"description\": \"I am still here just invisible so that I don't annoy you, just dont touch the log players\"";;
+                    string newValue = "\"description\": \"I know you played one back, stop right now, or else bad things will happen\"";
+                    
+                    TutorialSelector.ChangeArgJsonText(oldValue,newValue);
                 }
             }));
     }

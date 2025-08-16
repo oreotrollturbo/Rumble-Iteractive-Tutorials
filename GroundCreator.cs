@@ -21,10 +21,21 @@ public static class GroundCreator
         ground.transform.position = position;
         ground.transform.localScale = new Vector3(size.x, GROUND_THICKNESS, size.y);
         
-        // Make the ground completely transparent
         Renderer renderer = ground.GetComponent<Renderer>();
-        renderer.material.shader = Shader.Find("Universal Render Pipeline/Lit");
-        renderer.material.color = new Color(0, 0, 0, 0);
+        Material mat = renderer.material;
+
+// Make sure we are using URP/Lit
+        mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+
+// Enable transparency
+        mat.SetFloat("_Surface", 1); // 0 = Opaque, 1 = Transparent
+        mat.SetFloat("_Blend", 0);   // Alpha blending
+        mat.SetFloat("_ZWrite", 0);  // Don't write to depth
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+// Set color with alpha 0
+        mat.color = new Color(1, 1, 1, 0);
         //renderer.material.color = new Color(0.5f, 0.5f, 0.5f, 0.3f); //Debug colour
         
         
@@ -41,6 +52,8 @@ public static class GroundCreator
         
         // Set layer to Ground (layer 9) for proper physics interactions
         ground.layer = 9;
+        
+        ground.GetComponent<Renderer>().enabled = false;
         
         return ground;
     }

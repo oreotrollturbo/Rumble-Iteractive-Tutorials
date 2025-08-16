@@ -14,6 +14,8 @@ public static class AudioManager
         public AudioFileReader Reader { get; set; }
         public long PausedPosition { get; set; } = 0;
         public bool IsPaused { get; set; } = false;
+        
+        public TimeSpan Duration { get; set; }
     }
 
     private static IEnumerator PlaySound(ClipData clipData, bool loop)
@@ -69,7 +71,8 @@ public static class AudioManager
         {
             WaveOut = waveOut,
             VolumeProvider = volumeProvider,
-            Reader = reader
+            Reader = reader,
+            Duration = reader.TotalTime
         };
 
         MelonCoroutines.Start(PlaySound(clipData, loop));

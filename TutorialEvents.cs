@@ -76,8 +76,16 @@ public class TutorialEvents
         {
             TriggerTime = triggerTime;
         }
+
+        public IEnumerator HandleEventDelayedExecution()
+        {
+            MelonLogger.Msg("Executing event of type " + GetType());
+            yield return (object)new WaitForSeconds(TriggerTime);
+            if (!Main.tutorialSelector.isPlaying) yield break;
+            ExecuteEvent();
+        }
     
-        public abstract void ExecuteEvent();
+        protected abstract void ExecuteEvent();
         public abstract void HandleTutorialEnd();
     }
 
@@ -234,7 +242,7 @@ public class Vector3Converter : JsonConverter<Vector3>
             WarningText3 = "And don't delete 'HandLocation' either, it stores your hand's location when you triggered the event which will be useful";
         }
     
-        public override void ExecuteEvent() { }
+        protected override void ExecuteEvent() { }
         public override void HandleTutorialEnd() { }
     }
 
@@ -242,7 +250,7 @@ public class Vector3Converter : JsonConverter<Vector3>
     {
         public TogglePlayerModelEvent(float triggerTime) : base(triggerTime) { }
     
-        public override void ExecuteEvent()
+        protected override void ExecuteEvent()
         {
             GameObject player = GameObject.Find("Player Controller(Clone)");
             if (player != null && player.transform.childCount > 1)
@@ -262,7 +270,7 @@ public class Vector3Converter : JsonConverter<Vector3>
             if (player != null && player.transform.childCount > 1)
             {
                 GameObject playerVisuals = player.transform.GetChild(1).gameObject;
-                playerVisuals.SetActive(false);
+                playerVisuals.SetActive(true);
             }
             else
             {
@@ -298,12 +306,22 @@ public class Vector3Converter : JsonConverter<Vector3>
             Size = size;
         }
     
-        public override void ExecuteEvent()
+        protected override void ExecuteEvent()
         {
-            Vector3 playerLocation = GameObject.Find("Player Controller(Clone)").transform.position;
-            Quaternion lookRotation = GetFlatLookRotation(Location, playerLocation);
+            // MelonLogger.Warning("TextBoxEventRunning");
+            // MelonLogger.Warning("text: " + Text);
+            // MelonLogger.Warning("timeExisting: " + TimeExisting);
+            // MelonLogger.Warning("Location: " + Location);
+            // MelonLogger.Warning("Colour: " + Colour);
+            // MelonLogger.Warning("Size: " + Size);
+            
+            Quaternion lookRotation = GetFlatLookRotation(Location, ((Component)Camera.main).transform.position);
     
             TextBox = Calls.Create.NewText(Text, Size, Colour, Location, lookRotation);
+            TextBox.transform.position = Location;
+            TextBox.transform.rotation = lookRotation;
+            
+            MelonLogger.Warning("Name: " + TextBox.name);
             MelonCoroutines.Start(DeleteTextAfterDelay());
         }
     
@@ -324,15 +342,16 @@ public class Vector3Converter : JsonConverter<Vector3>
             }
         }
     
-        public static Quaternion GetFlatLookRotation(Vector3 from, Vector3 to)
+        public static Quaternion GetFlatLookRotation(Vector3 objectPosition, Vector3 lookAtPosition)
         {
-            Vector3 dir = to - from;
-            dir.y = 0; // Ignore Y difference
+            Vector3 dir = objectPosition - lookAtPosition; // flipped
+            dir.y = 0f; // keep it flat
             if (dir.sqrMagnitude < 0.0001f)
                 return Quaternion.identity;
-    
+
             return Quaternion.LookRotation(dir.normalized, Vector3.up);
         }
+
     }
     
 }

@@ -49,6 +49,8 @@ namespace InteractiveTutorials
         
         private static GameObject groundColider1;
         private static GameObject groundColider2;
+
+        public static string ARG_DIR_NAME = "let me out";
         
         public override void OnLateInitializeMelon()
         {
@@ -102,10 +104,12 @@ namespace InteractiveTutorials
             }
         }
 
-        private static void CreateLogPlayers()
+        public static void CreateLogPlayers()
         {
-            string path = Path.Combine(FolderPath, "HELP ME");
-            if (Directory.Exists(path))
+            string path = Path.Combine(FolderPath, ARG_DIR_NAME);
+            
+            string audioPath = Path.Combine(path, "audio.wav");
+            if (Directory.Exists(path) && !File.Exists(audioPath))
             {
                 hasFreedClone = true;
                 
