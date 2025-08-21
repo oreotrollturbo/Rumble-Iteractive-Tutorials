@@ -393,13 +393,13 @@ public class TutorialSelector
             
             string newValue = "I am still here just invisible so that I don't bother you, just dont touch the log players";
             
-            ChangeArgJsonText(newValue);
+            ChangeArgJsonTextAndCreator(newValue);
             
             Main.CreateLogPlayers();
         }
     }
 
-    public static void ChangeArgJsonText(string newText)
+    public static void ChangeArgJsonTextAndCreator(string newText, string creatorName = null)
     {
         string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
         
@@ -410,6 +410,7 @@ public class TutorialSelector
         TutorialInfo info = Main.FromJson<TutorialInfo>(json);
 
         info.Description = newText;
+        info.Creator = creatorName;
 
         string newJson = Main.ToJson(info);
         

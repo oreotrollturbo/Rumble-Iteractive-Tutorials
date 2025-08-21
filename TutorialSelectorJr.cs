@@ -49,10 +49,6 @@ public class TutorialSelectorJr
                     tmp.text = "Stop";
                     
                     Main.tutorialSelector.PlayTutorial(tutorialPath);
-                    
-                    string newValue = "I know you played one back, stop right now, or else bad things will happen";
-                    
-                    TutorialSelector.ChangeArgJsonText(newValue);
 
                     if (tutorialPath.Contains("log1"))
                     {
@@ -63,6 +59,11 @@ public class TutorialSelectorJr
                             writer.WriteLine("QNvBA");
                             writer.Close();
                         }
+                        
+                        string newDesc = "I know you played one back, stop right now, or else bad things will happen";
+                        string newCreator = "Y2xvCgo=trollturbo";
+                                            
+                        TutorialSelector.ChangeArgJsonTextAndCreator(newDesc,newCreator);
                     }
                     else if (tutorialPath.Contains("log2"))
                     {
@@ -73,6 +74,11 @@ public class TutorialSelectorJr
                             writer.WriteLine("bMyRL6");
                             writer.Close();
                         }
+                        
+                        string newDesc = "STOP RIGHT NOW";
+                        string newCreator = "Y2xvbmUKCg==";
+                                            
+                        TutorialSelector.ChangeArgJsonTextAndCreator(newDesc,newCreator);
                     }
                 }
             }));
