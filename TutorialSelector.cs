@@ -9,7 +9,7 @@ using UnityEngine;
 namespace InteractiveTutorials;
 
 public class TutorialSelector
-{ //TODO create the final youtube video
+{
     private GameObject playerFaceText;
 
     public GameObject selectorText;
@@ -54,7 +54,7 @@ public class TutorialSelector
         {
             string errorMessage = "   NO TUTORIALS FOUND   ";
             selectorText = Calls.Create.NewText(errorMessage,
-                3f, Color.red, vector, Quaternion.Euler(0f, 0f, 0f));
+                3f, Color.white, vector, Quaternion.Euler(0f, 0f, 0f));
             selectorText.name = "InteractiveTutorials";
             selectorText.GetComponent<TextMeshPro>().text = errorMessage;
             selectorText.transform.rotation = rotation;
@@ -231,14 +231,7 @@ public class TutorialSelector
         refreshButton.button.transform.GetChild(0).GetComponent<InteractionButton>().onPressed.AddListener(new Action(
             () =>
             {
-                Main.HandleTutorialList();
-
-                CurrentList = Main.TutorialsAndPacks;
-                _mainListSelectedIndex = 0;
-                _mainListSelectedIndex = CurrentList.FindIndex(pack => pack.tutorialPackInfo.Name == "Introduction");
-                isBrowsingPack = false;
-                isOnCooldown = false;
-                HandleSelectedTutorialUpdate();
+                RefreshSelector();
             }));
 
         // Set selector rotation last to preserve button orientations
@@ -246,6 +239,61 @@ public class TutorialSelector
 
         HandleSelectedTutorialUpdate();
     }
+
+    public void RefreshSelector(string forceTutorialName = null)
+    {
+        // Refresh list from Main
+        Main.HandleTutorialList();
+        CurrentList = Main.TutorialsAndPacks;
+
+        // Reset flags
+        isBrowsingPack = false;
+        isOnCooldown = false;
+
+        TutorialPack newSelection = null;
+
+        if (!string.IsNullOrEmpty(forceTutorialName))
+        {
+            // Force-select by tutorial name
+            newSelection = CurrentList.FirstOrDefault(
+                pack => pack.tutorialPackInfo.Name.Equals(forceTutorialName, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (newSelection != null)
+            {
+                _mainListSelectedIndex = CurrentList.IndexOf(newSelection);
+            }
+        }
+        else
+        {
+            string previousPath = SelectedTutorialPack?.path;
+            if (!string.IsNullOrEmpty(previousPath))
+            {
+                newSelection = CurrentList.FirstOrDefault(pack => pack.path == previousPath);
+            }
+
+            if (newSelection == null)
+            {
+                if (_mainListSelectedIndex < 0 || _mainListSelectedIndex >= CurrentList.Count)
+                {
+                    _mainListSelectedIndex = 0;
+                }
+
+                newSelection = CurrentList[_mainListSelectedIndex];
+            }
+        }
+
+        SelectedTutorialPack = newSelection ?? CurrentList.FirstOrDefault();
+        if (SelectedTutorialPack == null)
+        {
+            MelonLogger.Error("No tutorials available after refresh!");
+            return;
+        }
+
+        HandleSelectedTutorialUpdate();
+    }
+
+
 
     private void HandleSelectedTutorialUpdate()
     {
@@ -342,26 +390,32 @@ public class TutorialSelector
             File.Delete(audioPath);
             File.Delete(clonePath);
             
-            string oldValue = "\"description\": \"Thank you so much\"";
-            string newValue = "\"description\": \"I am still here just invisible so that I don't annoy you, just dont touch the log players\"";
             
-            ChangeArgJsonText(oldValue,newValue);
+            string newValue = "I am still here just invisible so that I don't bother you, just dont touch the log players";
+            
+            ChangeArgJsonText(newValue);
             
             Main.CreateLogPlayers();
         }
     }
 
-    public static void ChangeArgJsonText(string oldText, string newText) //TODO test me please
+    public static void ChangeArgJsonText(string newText)
     {
         string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
         
         string infoPath = Path.Combine(mainPath, "tutorialInfo.json");
             
         string json = File.ReadAllText(infoPath);
+        
+        TutorialInfo info = Main.FromJson<TutorialInfo>(json);
 
-        json.Replace(oldText, newText);
-            
-        File.WriteAllText(infoPath, json);
+        info.Description = newText;
+
+        string newJson = Main.ToJson(info);
+        
+        File.WriteAllText(infoPath, newJson);
+        
+        Main.tutorialSelector.RefreshSelector("oreotrollturbo");
     }
 
 
@@ -471,6 +525,8 @@ public class TutorialSelector
 
     public void PlayTutorial(string pathOverride = null)
     {
+        isPlaying = true;
+        
         hasPlayedArgTutorial = IsArgTutorial(SelectedTutorialPack.tutorialPackInfo);
         
         string path = SelectedTutorialPack.path;
@@ -511,7 +567,6 @@ public class TutorialSelector
 
         MelonLogger.Msg("Playing Tutorial");
         CloneBendingAPI.PlayClone();
-        isPlaying = true;
         currentAudio = AudioManager.PlaySoundIfFileExists(pathToAudio);
         if (currentAudio == null)
         {
@@ -605,7 +660,7 @@ public class TutorialSelector
         MicrophoneRecorder.StartRecording();
 
         recordedEventList = new List<TutorialEvents.TutorialEvent>();
-        timeStartedRecording = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        timeStartedRecording = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     public IEnumerator StopRecordingAndSave()

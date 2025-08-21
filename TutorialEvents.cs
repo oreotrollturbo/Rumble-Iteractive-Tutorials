@@ -55,8 +55,8 @@ public class TutorialEvents
 
     public static List<TutorialEvent> SaveEvent(List<TutorialEvent> recordedEventList, long timeStartedRecording)
     {
-        float timeDelay = (float)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(timeStartedRecording))
-            .TotalSeconds;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        float timeDelay = (now - timeStartedRecording) / 1000f; // keep sub-second precision
 
         TutorialEvent tutorialEvent = new GenericEvent(timeDelay);
 
@@ -80,8 +80,25 @@ public class TutorialEvents
         public IEnumerator HandleEventDelayedExecution()
         {
             MelonLogger.Msg("Executing event of type " + GetType());
-            yield return (object)new WaitForSeconds(TriggerTime);
-            if (!Main.tutorialSelector.isPlaying) yield break;
+
+            float remainingTime = TriggerTime;
+
+            while (remainingTime > 0f)
+            {
+                if (!Main.tutorialSelector.isPlaying)
+                {
+                    yield break;
+                }
+                    
+
+                float step = Mathf.Min(1f, remainingTime);
+                yield return new WaitForSeconds(step);
+                remainingTime -= step;
+            }
+
+            if (!Main.tutorialSelector.isPlaying)
+                yield break;
+
             ExecuteEvent();
         }
     
@@ -102,7 +119,7 @@ public class TutorialEventConverter : JsonConverter<TutorialEvent>
 
         string typeDiscriminator = typeElement.GetString();
 
-        return typeDiscriminator switch //TODO add stuff here
+        return typeDiscriminator switch //TODO add new ones
         {
             "GenericEvent" => JsonSerializer.Deserialize<GenericEvent>(root.GetRawText(), options),
             "TogglePlayerModelEvent" => JsonSerializer.Deserialize<TogglePlayerModelEvent>(root.GetRawText(), options),
@@ -231,7 +248,7 @@ public class Vector3Converter : JsonConverter<Vector3>
         public string WarningText3 { get; set; }
 
         public GenericEvent(float triggerTime) : base(triggerTime){
-            Transform playerHand = GameObject.Find("Player Controller(Clone)").transform.GetChild(2).GetChild(2);
+            Transform playerHand = GameObject.Find("Player Controller(Clone)").transform.GetChild(2).GetChild(1); //Left hand
 
             HandX = playerHand.position.x;
             HandY = playerHand.position.y;
@@ -321,7 +338,6 @@ public class Vector3Converter : JsonConverter<Vector3>
             TextBox.transform.position = Location;
             TextBox.transform.rotation = lookRotation;
             
-            MelonLogger.Warning("Name: " + TextBox.name);
             MelonCoroutines.Start(DeleteTextAfterDelay());
         }
     

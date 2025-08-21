@@ -2,6 +2,7 @@
 using Il2CppTMPro;
 using RumbleModdingAPI;
 using UnityEngine;
+using File = Il2CppSystem.IO.File;
 using Path = Il2CppSystem.IO.Path;
 
 namespace InteractiveTutorials;
@@ -49,10 +50,30 @@ public class TutorialSelectorJr
                     
                     Main.tutorialSelector.PlayTutorial(tutorialPath);
                     
-                    string oldValue = "\"description\": \"I am still here just invisible so that I don't annoy you, just dont touch the log players\"";;
-                    string newValue = "\"description\": \"I know you played one back, stop right now, or else bad things will happen\"";
+                    string newValue = "I know you played one back, stop right now, or else bad things will happen";
                     
-                    TutorialSelector.ChangeArgJsonText(oldValue,newValue);
+                    TutorialSelector.ChangeArgJsonText(newValue);
+
+                    if (tutorialPath.Contains("log1"))
+                    {
+                        string newTextPath = Path.Combine(tutorialPath, "info.txt");
+
+                        using (StreamWriter writer = new StreamWriter(newTextPath, false)) 
+                        {
+                            writer.WriteLine("QNvBA");
+                            writer.Close();
+                        }
+                    }
+                    else if (tutorialPath.Contains("log2"))
+                    {
+                        string newTextPath = Path.Combine(tutorialPath, "info.txt");
+
+                        using (StreamWriter writer = new StreamWriter(newTextPath, false)) 
+                        {
+                            writer.WriteLine("bMyRL6");
+                            writer.Close();
+                        }
+                    }
                 }
             }));
     }

@@ -25,7 +25,7 @@ namespace InteractiveTutorials
         public const string Author = "oreotrollturbo";
     }
     
-    public class Main : MelonMod //TODO fix/test the countdown method to use for logs
+    public class Main : MelonMod
     {
         private Mod mod = new Mod();
         public static string FolderPath => Path.Combine(MelonEnvironment.UserDataDirectory, "InteractiveTutorials");
@@ -153,7 +153,9 @@ namespace InteractiveTutorials
         }
 
         public static void HandleTutorialList()
-        {
+        { 
+            
+           TutorialsAndPacks.Clear();
            string[] tutorialPaths = Directory.GetDirectories(FolderPath);
 
            foreach (string path in tutorialPaths)
@@ -197,7 +199,7 @@ namespace InteractiveTutorials
             if (tutorialSelector == null) return;
             if ((double)Calls.ControllerMap.LeftController.GetSecondary() == 1.0 && !YButtonCooldown)
             {
-                //Add logic for a future button
+                //tutorialSelector.PlayTutorial();
                 
                 YButtonCooldown = true;
                 MelonCoroutines.Start(StartYButtonCooldown());
@@ -247,6 +249,13 @@ namespace InteractiveTutorials
                 }
                 return;
             }
+
+            MelonCoroutines.Start(CreateTutorialSelector());
+        }
+
+        private IEnumerator CreateTutorialSelector()
+        {
+            yield return new WaitForSeconds(3f);
             
             Type mainType = typeof(Core);
             CloneBendingAPI.cloneBendingType = mainType;
