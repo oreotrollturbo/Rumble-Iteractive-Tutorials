@@ -20,7 +20,7 @@ namespace InteractiveTutorials
     public static class BuildInfo
     {
         public const string ModName = "Interactive Tutorials";
-        public const string ModVersion = "1.0.0";
+        public const string ModVersion = "1.0.1";
         public const string Description = "Interactive tutorials for various moves and poses using clonebending!";
         public const string Author = "oreotrollturbo";
     }
