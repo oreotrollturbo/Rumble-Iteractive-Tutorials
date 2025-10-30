@@ -387,9 +387,7 @@ public class TutorialSelector
             string clonePath = Path.Combine(mainPath, "clone.json");
             
             
-            File.Delete(audioPath);
-            File.Delete(clonePath);
-            
+            MelonCoroutines.Start(DeleteFilesWithDelay(audioPath,clonePath));
             
             string newValue = "I am still here just invisible so that I don't bother you, just dont touch the log players";
             
@@ -398,27 +396,82 @@ public class TutorialSelector
             Main.CreateLogPlayers();
         }
     }
+    
+    private IEnumerator DeleteFilesWithDelay(string audioPath, string clonePath, int attempts = 0)
+    {
+        // Wait a frame to ensure any file handles are released
+        yield return new WaitForSeconds(0.5f);
+
+        bool success = true;
+    
+        try
+        {
+            // Check if files exist before attempting deletion
+            if (File.Exists(audioPath))
+            {
+                File.Delete(audioPath);
+            }
+            else
+            {
+                MelonLogger.Warning($"Audio file not found: {audioPath}");
+            }
+
+            if (File.Exists(clonePath))
+            {
+                File.Delete(clonePath);
+            }
+            else
+            {
+                MelonLogger.Warning($"Clone file not found: {clonePath}");
+            }
+        }
+        catch (IOException ioEx)
+        {
+            success = false;
+        }
+
+        if (!success && attempts > 10) //Recursion based :)
+        {
+            MelonCoroutines.Start(DeleteFilesWithDelay(audioPath, clonePath, attempts++));
+            yield break;
+        }
+        
+        MelonLogger.Msg("Program deleted files successfully!");
+    }
 
     public static void ChangeArgJsonTextAndCreator(string newText, string creatorName = null)
     {
-        string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
-        
+        string mainPath = Path.Combine(Main.FolderPath, Main.ARG_DIR_NAME);
+    
         string infoPath = Path.Combine(mainPath, "tutorialInfo.json");
-            
-        string json = File.ReadAllText(infoPath);
-        
-        TutorialInfo info = Main.FromJson<TutorialInfo>(json);
+    
+        if (!File.Exists(infoPath))
+        {
+            MelonLogger.Error($"Info file not found: {infoPath}");
+            return;
+        }
+    
+        try
+        {
+            string json = File.ReadAllText(infoPath);
+            TutorialInfo info = Main.FromJson<TutorialInfo>(json);
 
-        info.Description = newText;
-        info.Creator = creatorName;
+            info.Description = newText;
+            if (creatorName != null)
+            {
+                info.Creator = creatorName;
+            }
 
-        string newJson = Main.ToJson(info);
+            string newJson = Main.ToJson(info);
+            File.WriteAllText(infoPath, newJson);
         
-        File.WriteAllText(infoPath, newJson);
-        
-        Main.tutorialSelector.RefreshSelector("oreotrollturbo");
+            Main.tutorialSelector?.RefreshSelector("oreotrollturbo");
+        }
+        catch (Exception ex)
+        {
+            MelonLogger.Error($"Error updating ARG JSON: {ex.Message}");
+        }
     }
-
 
     private void CycleTutorialBy(int number)
     {
@@ -549,7 +602,6 @@ public class TutorialSelector
         if (!File.Exists(pathToAudio))
         {
             string actualPath = Path.Combine(path, "metadata.json");
-            
             File.Move(actualPath,pathToAudio);
         }
 
