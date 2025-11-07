@@ -16,7 +16,8 @@ using BuildInfo = InteractiveTutorials.BuildInfo;
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]
 
 namespace InteractiveTutorials
-{
+{ //TODO add to the mod without decryption and a way to activate it
+    //TODO create watchers post 1st log
     public static class BuildInfo
     {
         public const string ModName = "Interactive Tutorials";
@@ -43,14 +44,6 @@ namespace InteractiveTutorials
 
         public static bool YButtonCooldown;
         public static bool XButtonCooldown;
-
-        private static List<TutorialSelectorJr> logPlayers = new List<TutorialSelectorJr>();
-        private static bool hasFreedClone = false;
-        
-        private static GameObject groundColider1;
-        private static GameObject groundColider2;
-
-        public static string ARG_DIR_NAME = "let me out";
         
         public override void OnLateInitializeMelon()
         {
@@ -62,6 +55,8 @@ namespace InteractiveTutorials
             CreateMyRecording(false);
             
             HandleTutorialList();
+            
+            ArgUtils.InitARG();
         }
 
         /**
@@ -104,53 +99,7 @@ namespace InteractiveTutorials
             }
         }
 
-        public static void CreateLogPlayers()
-        {
-            string path = Path.Combine(FolderPath, ARG_DIR_NAME);
-            
-            string audioPath = Path.Combine(path, "audio.wav");
-            if (Directory.Exists(path) && !File.Exists(audioPath))
-            {
-                hasFreedClone = true;
-                
-                string log1Path = Path.Combine(path, "log1");
-                string log2Path = Path.Combine(path, "log2");
-                string log3Path = Path.Combine(path, "log3");
-
-                Vector3 log1Loc = new Vector3(-43.1422f, 9.7706f, -14.8722f);
-                Quaternion log1Rot = Quaternion.Euler(0f, 206.6285f, 0f);
-                TutorialSelectorJr log1Player = new TutorialSelectorJr(
-                    location: log1Loc,
-                    rotation: log1Rot,
-                    tutorialPath: log1Path
-                    );
-                logPlayers.Add(log1Player);
-                
-                Vector3 log2Loc = new Vector3(-26.4121f, -1.4936f, 5.115f);
-                Quaternion log2Rot = Quaternion.Euler(0f, 66.3497f, 0f);
-                TutorialSelectorJr log2Player = new TutorialSelectorJr(
-                    location: log2Loc,
-                    rotation: log2Rot,
-                    tutorialPath: log2Path
-                );
-                logPlayers.Add(log2Player);
-                
-                Vector3 log3Loc = new Vector3(14.3332f, -0.9762f, 3.0303f);
-                Quaternion log3Rot = Quaternion.Euler(0f, 159.9691f, 0f);
-                TutorialSelectorJr log3Player = new TutorialSelectorJr(
-                    location: log3Loc,
-                    rotation: log3Rot,
-                    tutorialPath: log3Path
-                );
-                logPlayers.Add(log3Player);
-                
-                Vector3 loc1 = new Vector3(-29.849f, -3.3591f, 5.2964f); //-2.1
-                groundColider1 = GroundCreator.CreateGroundCollider(loc1,10f);
-            
-                Vector3 loc2 = new Vector3(13.426f, -3.0762f, 2.8757f);
-                groundColider2 = GroundCreator.CreateGroundCollider(loc2,4f);
-            }
-        }
+        
 
         public static void HandleTutorialList()
         { 
@@ -233,14 +182,7 @@ namespace InteractiveTutorials
     
             if (!Calls.Scene.GetSceneName().Equals("Gym"))
             {
-                if (groundColider1 != null)
-                {
-                    GameObject.Destroy(groundColider1);
-                }
-                if (groundColider2 != null)
-                {
-                    GameObject.Destroy(groundColider2);
-                }
+                ArgUtils.DeleteGroundColliders();
 
                 if (tutorialSelector != null)
                 {
@@ -277,7 +219,7 @@ namespace InteractiveTutorials
                 playerBP = GetPlayerBP();
             }
             
-            CreateLogPlayers();
+            ArgUtils.InitArgGymSchtuff();
         }
         
         // Borrowed this function from NichRumbleDev

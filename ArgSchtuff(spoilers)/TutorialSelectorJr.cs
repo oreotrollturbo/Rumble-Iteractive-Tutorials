@@ -2,7 +2,6 @@
 using Il2CppTMPro;
 using RumbleModdingAPI;
 using UnityEngine;
-using File = Il2CppSystem.IO.File;
 using Path = Il2CppSystem.IO.Path;
 
 namespace InteractiveTutorials;
@@ -40,7 +39,7 @@ public class TutorialSelectorJr
                     TextMeshPro tmp = playButton.label.GetComponent<TextMeshPro>();
                     tmp.text = "Play";
                     
-                    Main.tutorialSelector.StopPlayback();
+                    Main.tutorialSelector.StopPlayback(true);
                 }
                 else
                 {
@@ -48,7 +47,7 @@ public class TutorialSelectorJr
                     TextMeshPro tmp = playButton.label.GetComponent<TextMeshPro>();
                     tmp.text = "Stop";
                     
-                    Main.tutorialSelector.PlayTutorial(tutorialPath);
+                    Main.tutorialSelector.StartPlayback(tutorialPath);
 
                     if (tutorialPath.Contains("log1"))
                     {
@@ -63,7 +62,7 @@ public class TutorialSelectorJr
                         string newDesc = "I know you played one back, stop right now, or else bad things will happen";
                         string newCreator = "Y2xvCgo=trollturbo";
                                             
-                        TutorialSelector.ChangeArgJsonTextAndCreator(newDesc,newCreator);
+                        ArgUtils.ChangeArgJsonTextAndCreator(newDesc,newCreator);
                     }
                     else if (tutorialPath.Contains("log2"))
                     {
@@ -78,7 +77,7 @@ public class TutorialSelectorJr
                         string newDesc = "STOP RIGHT NOW";
                         string newCreator = "Y2xvbmUKCg==";
                                             
-                        TutorialSelector.ChangeArgJsonTextAndCreator(newDesc,newCreator);
+                        ArgUtils.ChangeArgJsonTextAndCreator(newDesc,newCreator);
                     }
                 }
             }));

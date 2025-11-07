@@ -369,5 +369,4 @@ public class Vector3Converter : JsonConverter<Vector3>
         }
 
     }
-    
 }

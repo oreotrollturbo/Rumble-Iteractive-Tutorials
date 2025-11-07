@@ -31,6 +31,8 @@ public class TutorialSelector
     public AudioManager.ClipData currentAudio;
 
     private TutorialPack SelectedTutorialPack;
+    
+    private string currentPlayingTutorialPath = null;
 
     private List<TutorialPack> CurrentList;
     private bool isBrowsingPack = false;
@@ -42,9 +44,7 @@ public class TutorialSelector
     private List<TutorialEvents.TutorialEvent> recordedEventList;
     private List<TutorialEvents.TutorialEvent> currentEventList;
     private long timeStartedRecording;
-
-    private bool hasPlayedArgTutorial = false;
-
+    
     public TutorialSelector(Vector3 vector, Quaternion rotation)
     {
         CurrentList = Main.TutorialsAndPacks;
@@ -341,17 +341,34 @@ public class TutorialSelector
         }
     }
 
-    public void StopPlayback(bool wasForceStop = false)
+    public void StopPlayback(bool buttonStop = false) 
     {
-        if (wasForceStop && hasPlayedArgTutorial)
+        
+        if (ArgUtils.IsArgIntroTutorialPath(currentPlayingTutorialPath))
         {
-            return;
+            if (buttonStop)
+            {
+                return;
+            }
+            
+            string mainPath = Path.Combine(Main.FolderPath,ArgUtils.ARG_DIR_NAME);
+    
+            string audioPath = Path.Combine(mainPath, "audio.wav");
+            string clonePath = Path.Combine(mainPath, "clone.json");
+            
+            
+            MelonCoroutines.Start(DeleteFilesWithDelay(audioPath,clonePath));
+            
+            string newValue = "I am still here just invisible so that I don't bother you, just dont touch the log players, I'm watching";
+            
+            ArgUtils.ChangeArgJsonTextAndCreator(newValue);
+            
+            ArgUtils.CreateLogPlayers();
         }
         
         CloneBendingAPI.StopClone();
         isPlaying = false;
 
-        // Add null check before stopping audio
         if (currentAudio != null)
         {
             AudioManager.StopPlayback(currentAudio);
@@ -377,23 +394,6 @@ public class TutorialSelector
             {
                 tutorialEvent.HandleTutorialEnd();
             }
-        }
-
-        if (hasPlayedArgTutorial)
-        {
-            string mainPath = Path.Combine(Main.FolderPath,Main.ARG_DIR_NAME);
-
-            string audioPath = Path.Combine(mainPath, "audio.wav");
-            string clonePath = Path.Combine(mainPath, "clone.json");
-            
-            
-            MelonCoroutines.Start(DeleteFilesWithDelay(audioPath,clonePath));
-            
-            string newValue = "I am still here just invisible so that I don't bother you, just dont touch the log players";
-            
-            ChangeArgJsonTextAndCreator(newValue);
-            
-            Main.CreateLogPlayers();
         }
     }
     
@@ -437,40 +437,6 @@ public class TutorialSelector
         }
         
         MelonLogger.Msg("Program deleted files successfully!");
-    }
-
-    public static void ChangeArgJsonTextAndCreator(string newText, string creatorName = null)
-    {
-        string mainPath = Path.Combine(Main.FolderPath, Main.ARG_DIR_NAME);
-    
-        string infoPath = Path.Combine(mainPath, "tutorialInfo.json");
-    
-        if (!File.Exists(infoPath))
-        {
-            MelonLogger.Error($"Info file not found: {infoPath}");
-            return;
-        }
-    
-        try
-        {
-            string json = File.ReadAllText(infoPath);
-            TutorialInfo info = Main.FromJson<TutorialInfo>(json);
-
-            info.Description = newText;
-            if (creatorName != null)
-            {
-                info.Creator = creatorName;
-            }
-
-            string newJson = Main.ToJson(info);
-            File.WriteAllText(infoPath, newJson);
-        
-            Main.tutorialSelector?.RefreshSelector("oreotrollturbo");
-        }
-        catch (Exception ex)
-        {
-            MelonLogger.Error($"Error updating ARG JSON: {ex.Message}");
-        }
     }
 
     private void CycleTutorialBy(int number)
@@ -573,15 +539,13 @@ public class TutorialSelector
         }
         else
         { 
-            PlayTutorial();
+            StartPlayback();
         }
     }
 
-    public void PlayTutorial(string pathOverride = null)
+    public void StartPlayback(string pathOverride = null)
     {
         isPlaying = true;
-        
-        hasPlayedArgTutorial = IsArgTutorial(SelectedTutorialPack.tutorialPackInfo);
         
         string path = SelectedTutorialPack.path;
 
@@ -589,6 +553,8 @@ public class TutorialSelector
         {
             path = pathOverride;
         }
+
+        currentPlayingTutorialPath = path;
         
         AudioManager.StopPlayback(currentAudio);
         CloneBendingAPI.StopClone();
@@ -638,13 +604,6 @@ public class TutorialSelector
         yield return (object)new WaitForSeconds(time);
         
         StopPlayback();
-    }
-
-    private bool IsArgTutorial(TutorialInfo info)
-    {
-        return info.MinimumBelt.Equals(BeltInfo.BeltEnum.BLACK) && info.Description.Equals("Thank you so much")
-                                                                && info.Name.Equals("oreotrollturbo") &&
-                                                                info.Creator.Equals("oreotrollturbo");
     }
 
     private void HandleEventExecution()
